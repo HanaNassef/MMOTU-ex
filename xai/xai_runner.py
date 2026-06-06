@@ -21,9 +21,17 @@ class XAIRunner:
         self.device = device
         self.logger = logger
         
+        # Disable inplace operations to prevent backward hook errors
+        self._disable_inplace(self.model)
+        
         self.cam_explainer = CAMExplainer(model, model_name, device)
         self.grad_explainer = GradientExplainer(model, device)
         self.shap_explainer = None
+
+    def _disable_inplace(self, model):
+        for m in model.modules():
+            if hasattr(m, 'inplace'):
+                m.inplace = False
         
         # Determine global min/max WCIS
         # In a real scenario, this is passed or pre-computed. If not provided via config, we'll use [0, 1] fallback
