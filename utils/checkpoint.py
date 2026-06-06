@@ -16,7 +16,7 @@ def save_checkpoint(state: dict, is_best: bool, checkpoint_dir: str, run_name: s
 
 def load_checkpoint(path: str, model: torch.nn.Module, optimizer=None, scheduler=None, scaler=None) -> dict:
     """Load model weights and optional optimizer/scheduler states."""
-    checkpoint = torch.load(path, map_location="cpu")
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     
     if optimizer and 'optimizer_state_dict' in checkpoint:

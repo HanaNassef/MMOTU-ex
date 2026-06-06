@@ -4,10 +4,26 @@ from pytorch_grad_cam import GradCAM, GradCAMPlusPlus, ScoreCAM, EigenCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import logging
 
-def reshape_transform_swin(tensor, height=7, width=7):
+def reshape_transform_swin(tensor):
     """Required for Swin Transformer CAM computation."""
-    result = tensor[:, 1:, :].reshape(tensor.size(0), height, width, tensor.size(2))
-    result = result.transpose(2, 3).transpose(1, 2)
+    if len(tensor.shape) == 3: # (B, L, C)
+        B, L, C = tensor.shape
+        H = W = int(np.sqrt(L))
+        result = tensor.reshape(B, H, W, C)
+    else: # (B, H, W, C)
+        result = tensor
+    
+    # result is (B, H, W, C), grad-cam expects (B, C, H, W)
+    result = result.permute(0, 3, 1, 2)
+    return result
+
+def reshape_transform_vit(tensor):
+    """Required for ViT CAM computation (has CLS token)."""
+    # tensor shape is (B, L, C) where L = H*W + 1
+    B, L, C = tensor.shape
+    H = W = int(np.sqrt(L - 1))
+    result = tensor[:, 1:, :].reshape(B, H, W, C)
+    result = result.permute(0, 3, 1, 2)
     return result
 
 class CAMExplainer:
@@ -41,7 +57,11 @@ class CAMExplainer:
     def compute_cam(self, image_tensor: torch.Tensor, class_idx: int, method: str = "gradcam") -> np.ndarray:
         method = method.lower()
         
-        reshape_transform = reshape_transform_swin if self.model_name in ["swin_t", "vit_b_16"] else None
+        reshape_transform = None
+        if self.model_name == "swin_t":
+            reshape_transform = reshape_transform_swin
+        elif self.model_name == "vit_b_16":
+            reshape_transform = reshape_transform_vit
         
         cam_class = None
         if method == "gradcam":

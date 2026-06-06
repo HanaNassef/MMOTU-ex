@@ -27,8 +27,8 @@ def create_patient_level_splits(metadata_df: pd.DataFrame, train_ratio: float = 
     train_val_idx = []
     
     for train_val_i, test_i in sgkf_test.split(X, y, groups):
-        train_val_idx = train_val_i
-        test_idx = test_i
+        train_val_idx = X[train_val_i]
+        test_idx = X[test_i]
         break # Just need one fold
         
     # Second split: Train vs Val from the Train+Val set
@@ -37,16 +37,16 @@ def create_patient_level_splits(metadata_df: pd.DataFrame, train_ratio: float = 
     
     sgkf_val = StratifiedGroupKFold(n_splits=int(1/relative_val_ratio), shuffle=True, random_state=random_state)
     
-    X_train_val = X[train_val_idx]
-    y_train_val = y[train_val_idx]
-    groups_train_val = groups[train_val_idx]
+    X_train_val = X[train_val_i]
+    y_train_val = y[train_val_i]
+    groups_train_val = groups[train_val_i]
     
     train_idx = []
     val_idx = []
     
     for train_i, val_i in sgkf_val.split(X_train_val, y_train_val, groups_train_val):
-        train_idx = train_val_idx[train_i]
-        val_idx = train_val_idx[val_i]
+        train_idx = X_train_val[train_i]
+        val_idx = X_train_val[val_i]
         break # Just need one fold
         
     # Assign splits

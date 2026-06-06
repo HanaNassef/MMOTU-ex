@@ -67,14 +67,44 @@ def create_output_dirs(output_config):
 
 def load_or_discover_metadata(data_config) -> pd.DataFrame:
     raw_dir = Path(data_config.raw_dir)
+    
+    # Try to find MMOTU style txt files first
+    train_cls_path = raw_dir / "train_cls.txt"
+    val_cls_path = raw_dir / "val_cls.txt"
+    
+    if train_cls_path.exists() and val_cls_path.exists():
+        print("Found train_cls.txt and val_cls.txt. Loading metadata...")
+        data = []
+        for cls_file in [train_cls_path, val_cls_path]:
+            with open(cls_file, 'r') as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) < 2: continue
+                    img_name = parts[0]
+                    class_label = int(parts[1])
+                    
+                    img_path = raw_dir / data_config.images_subdir / img_name
+                    base_name = Path(img_name).stem
+                    mask_path = raw_dir / data_config.masks_subdir / f"{base_name}.PNG"
+                    
+                    # infer patient
+                    m = re.search(r'patient(\d+)', img_name, re.IGNORECASE)
+                    patient_id = m.group(1) if m else base_name
+                    
+                    data.append({
+                        'patient_id': patient_id,
+                        'image_path': str(img_path),
+                        'mask_path': str(mask_path) if mask_path.exists() else None,
+                        'class_label': class_label
+                    })
+        df = pd.DataFrame(data)
+        print(f"Loaded {len(df)} images from txt files.")
+        return df
+
     meta_path = raw_dir / data_config.metadata_file if data_config.metadata_file else None
     
     if meta_path and meta_path.exists():
         df = pd.read_csv(meta_path)
-        # Ensure standard columns
-        if 'image_path' not in df.columns:
-            # try to fix paths assuming relative to raw_dir
-            pass # Implementation specific to actual CSV format
         return df
         
     # Auto-discover
@@ -83,24 +113,20 @@ def load_or_discover_metadata(data_config) -> pd.DataFrame:
     masks_dir = raw_dir / data_config.masks_subdir
     
     data = []
-    # Assume folder names represent classes or filename encodes it
-    # We will just assign a dummy class 0 if we can't infer, but spec says 8 classes
-    # Assuming class subfolders in images_dir
     class_folders = [f for f in images_dir.iterdir() if f.is_dir()]
     if not class_folders:
-        # No subfolders, try filename regex or just put everything in class 0
         for img_path in images_dir.glob("*.*"):
             if img_path.suffix.lower() not in ['.jpg', '.png', '.jpeg']: continue
             
-            # infer patient
             m = re.search(r'patient(\d+)', img_path.stem, re.IGNORECASE)
-            patient_id = m.group(1) if m else "unknown"
+            patient_id = m.group(1) if m else img_path.stem
             
-            # infer class from filename? e.g. class3_patient...
             cm = re.search(r'class(\d+)', img_path.stem, re.IGNORECASE)
             class_label = int(cm.group(1)) if cm else 0
             
-            mask_path = masks_dir / img_path.name
+            mask_path = masks_dir / f"{img_path.stem}.PNG"
+            if not mask_path.exists():
+                mask_path = masks_dir / img_path.name
             
             data.append({
                 'patient_id': patient_id,
@@ -109,19 +135,16 @@ def load_or_discover_metadata(data_config) -> pd.DataFrame:
                 'class_label': class_label
             })
     else:
-        # Subfolders exist (e.g. class_0, class_1)
         for class_dir in class_folders:
-            # try to extract int from folder name
             digits = re.findall(r'\d+', class_dir.name)
             class_label = int(digits[-1]) if digits else 0
             
             for img_path in class_dir.glob("*.*"):
                 if img_path.suffix.lower() not in ['.jpg', '.png', '.jpeg']: continue
                 m = re.search(r'patient(\d+)', img_path.stem, re.IGNORECASE)
-                patient_id = m.group(1) if m else "unknown"
+                patient_id = m.group(1) if m else img_path.stem
                 
-                # Mask might be in matching subfolder or flat
-                mask_path = masks_dir / class_dir.name / img_path.name
+                mask_path = masks_dir / class_dir.name / f"{img_path.stem}.PNG"
                 if not mask_path.exists():
                     mask_path = masks_dir / img_path.name
                     
@@ -134,8 +157,6 @@ def load_or_discover_metadata(data_config) -> pd.DataFrame:
                 
     df = pd.DataFrame(data)
     print(f"Discovered {len(df)} images.")
-    print("Class distribution:")
-    print(df['class_label'].value_counts())
     return df
 
 def main():
@@ -171,7 +192,7 @@ def main():
             
             if args.debug:
                 # subset for debug
-                metadata = metadata.sample(min(100, len(metadata)), random_state=config.experiment.random_seed)
+                metadata = metadata.sample(min(100, len(metadata)), random_state=config.experiment.random_seed).reset_index(drop=True)
                 
             splits_df = create_patient_level_splits(metadata)
             splits_df.to_csv(config.data.splits_csv, index=False)
@@ -201,6 +222,10 @@ def main():
             model = model.to(device)
             
             logger.info(f"Model {model_name} created. Head in_features: {in_features}")
+            
+            # Inject experiment/gradient configs into training config for Trainer
+            config.training.use_amp = config.experiment.use_amp
+            config.training.gradient = config.gradient
             
             train_loader, val_loader, test_loader = get_dataloaders(config.data.splits_csv, config)
             
