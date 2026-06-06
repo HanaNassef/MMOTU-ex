@@ -184,16 +184,30 @@ def main():
     
     # ── Stage 1: Data ──
     if run_stage(1):
-        logger.info("=" * 60)
+        # Stage 1: Data Preparation
         logger.info("Stage 1: Data Preparation")
+
+        regenerate_splits = False
         if not Path(config.data.splits_csv).exists():
+            regenerate_splits = True
+        else:
+            # Check if existing splits match the debug/full intent
+            existing_splits = pd.read_csv(config.data.splits_csv)
+            if not args.debug and len(existing_splits) <= 100:
+                logger.info("Existing splits file looks like a debug subset. Regenerating for full run...")
+                regenerate_splits = True
+            elif args.debug and len(existing_splits) > 100:
+                logger.info("Existing splits file is large. Regenerating for debug run...")
+                regenerate_splits = True
+
+        if regenerate_splits:
             logger.info("Creating patient-level splits...")
             metadata = load_or_discover_metadata(config.data)
-            
+
             if args.debug:
                 # subset for debug
                 metadata = metadata.sample(min(100, len(metadata)), random_state=config.experiment.random_seed).reset_index(drop=True)
-                
+
             splits_df = create_patient_level_splits(metadata)
             splits_df.to_csv(config.data.splits_csv, index=False)
             
