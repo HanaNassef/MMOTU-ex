@@ -51,9 +51,9 @@ xai:
   run_shap: false
   shap_n_background: 100
   run_faithfulness: true               # Insertion/Deletion AUC
-  faithfulness_n_steps: 50
+  faithfulness_n_steps: 10
   save_viz: true
-  viz_n_samples: 50                    # How many sample images to visualize
+  viz_n_samples: 20                    # How many sample images to visualize
 
 # ── Evaluation ─────────────────────────────────────────────────────────
 evaluation:
