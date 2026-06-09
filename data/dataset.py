@@ -40,7 +40,7 @@ class MMOTUDataset(Dataset):
             if mask_path and pd.notna(mask_path) and Path(mask_path).exists():
                 mask = Image.open(mask_path).convert('L')
                 mask_np = np.array(mask)
-                mask_np = (mask_np > 127).astype(np.uint8) * 255
+                mask_np = (mask_np > 0).astype(np.uint8) * 255
                 mask = Image.fromarray(mask_np, mode='L')
             else:
                 logger.warning(f"Missing mask for {img_path}, using empty mask.")
