@@ -401,35 +401,62 @@ def main():
         all_sweeps = {}
         all_per_class = {}
         
-        # TTA Evaluation Pass
-        if getattr(config.training, 'use_tta', True):
-            logger.info("Running Test-Time Augmentation (TTA) Evaluation...")
+        if config.training.use_tta:
             from evaluation.tta import compute_tta_predictions
-            from training.metrics import compute_classification_metrics
-            
-            _, _, test_df = load_splits(config.data.splits_csv)
-            test_dataset_with_paths = MMOTUDataset(test_df, return_path=True)
-            
-            tta_results = {}
-            for trained_key, ckpt_path in trained_models.items():
-                logger.info(f"TTA for {trained_key}...")
-                
-                base_model_name = trained_key
-                if "_fold" in trained_key:
-                    base_model_name = trained_key.split("_fold")[0]
-                    
-                model, _ = get_model(base_model_name, num_classes=config.training.num_classes)
-                load_checkpoint(ckpt_path, model)
-                model = model.to(device).eval()
-                
-                probs, labels, _ = compute_tta_predictions(model, test_dataset_with_paths, device)
+            from training.metrics import compute_classification_metrics, compute_top2_accuracy
+            import json as _json
+
+            # Rebuild test_dataset_with_paths if not in scope (e.g. --stage 4 standalone run)
+            if 'test_dataset_with_paths' not in dir():
+                from torchvision import transforms as _transforms
+                _, _, _test_df = load_splits(config.data.splits_csv)
+                _val_transform = _transforms.Compose([
+                    _transforms.Resize((config.data.image_size, config.data.image_size)),
+                    _transforms.ToTensor(),
+                    _transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                ])
+                _mask_transform = _transforms.Compose([
+                    _transforms.Resize((config.data.image_size, config.data.image_size),
+                                       interpolation=_transforms.InterpolationMode.NEAREST),
+                    _transforms.ToTensor()
+                ])
+                test_dataset_with_paths = MMOTUDataset(
+                    _test_df, transform=_val_transform,
+                    mask_transform=_mask_transform, return_path=True
+                )
+
+            tta_all_metrics = {}
+            for model_name, ckpt_path in trained_models.items():
+                # Prefer SWA checkpoint if it exists, fall back to best checkpoint
+                swa_path = Path(config.output.checkpoints_dir) / f"{config.experiment.run_name}_{model_name}_swa.pt"
+                load_path = str(swa_path) if swa_path.exists() else ckpt_path
+                logger.info(f"TTA loading: {load_path}")
+
+                tta_model, _ = get_model(model_name, num_classes=config.training.num_classes)
+                load_checkpoint(load_path, tta_model)
+                tta_model = tta_model.to(device)
+                tta_model.eval()  # Explicit eval AFTER loading weights
+
+                probs, labels, paths = compute_tta_predictions(tta_model, test_dataset_with_paths, device)
                 preds = np.argmax(probs, axis=1)
-                metrics = compute_classification_metrics(preds, labels, probs, num_classes=config.training.num_classes)
-                tta_results[trained_key] = metrics
-                logger.info(f"{trained_key} TTA Top-1: {metrics['top1_acc']:.4f}")
-                
-            with open(Path(config.output.results_dir) / "tta_classification_results.json", 'w') as f:
-                json.dump(tta_results, f, indent=4)
+
+                metrics = compute_classification_metrics(
+                    preds, np.array(labels), probs,
+                    num_classes=config.training.num_classes
+                )
+                metrics['top2_acc'] = compute_top2_accuracy(
+                    torch.tensor(probs), torch.tensor(np.array(labels))
+                )
+                tta_all_metrics[model_name] = metrics
+
+                tta_out_path = Path(config.output.results_dir) / f"tta_metrics_{model_name}.json"
+                with open(tta_out_path, 'w') as f:
+                    m = {k: (v.tolist() if hasattr(v, 'tolist') else v) for k, v in metrics.items()}
+                    _json.dump(m, f, indent=4)
+                logger.info(f"TTA {model_name}: Top1={metrics['top1_acc']:.4f} F1={metrics['macro_f1']:.4f}")
+
+            torch.cuda.empty_cache()
+            gc.collect()
 
         for model_name, results_df in all_xai_results.items():
             if results_df.empty: continue

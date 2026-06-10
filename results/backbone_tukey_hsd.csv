@@ -1,0 +1,11 @@
+group1,group2,meandiff,p-adj,lower,upper,reject
+densenet121,efficientnet_b3,0.0718,0.0,0.0498,0.0938,True
+densenet121,mobilenet_v3_large,0.0714,0.0,0.0494,0.0934,True
+densenet121,resnet50,0.0485,0.0,0.0265,0.0705,True
+densenet121,swin_t,-0.0208,0.0746,-0.0428,0.0012,False
+efficientnet_b3,mobilenet_v3_large,-0.0004,1.0,-0.0224,0.0216,False
+efficientnet_b3,resnet50,-0.0234,0.031,-0.0454,-0.0014,True
+efficientnet_b3,swin_t,-0.0926,0.0,-0.1146,-0.0706,True
+mobilenet_v3_large,resnet50,-0.0229,0.0363,-0.0449,-0.0009,True
+mobilenet_v3_large,swin_t,-0.0922,0.0,-0.1142,-0.0702,True
+resnet50,swin_t,-0.0692,0.0,-0.0913,-0.0472,True

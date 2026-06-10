@@ -1,0 +1,9 @@
+{
+    "best_epoch": 39,
+    "best_val_macro_f1": 0.7017529036582102,
+    "best_val_top1_acc": 0.7446808510638298,
+    "best_val_top2_acc": 0.8468084931373596,
+    "best_val_balanced_acc": 0.7094294594294595,
+    "run_name": "exp_001_densenet121",
+    "timestamp": "2026-06-10 15:46:21"
+}

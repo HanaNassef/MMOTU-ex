@@ -77,6 +77,8 @@ def compute_exbale_anchors(seg_masks: list[np.ndarray], n_samples: int = 100) ->
     
     for idx in indices:
         mask = seg_masks[idx]
+        # Binarize: handles both 0/1 float and 0/0.00392 (ToTensor output) inputs
+        mask = (mask > 0).astype(np.float32)
         if mask.sum() == 0: continue
         
         # 1. Random Noise

@@ -1,0 +1,9 @@
+{
+    "best_epoch": 1,
+    "best_val_macro_f1": 0.06666666666666667,
+    "best_val_top1_acc": 0.1111111111111111,
+    "best_val_top2_acc": 0.2222222238779068,
+    "best_val_balanced_acc": 0.1,
+    "run_name": "exp_001_efficientnet_b3_fold0",
+    "timestamp": "2026-06-10 13:29:02"
+}

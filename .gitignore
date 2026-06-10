@@ -1,6 +1,7 @@
 # Data and Results
 data/raw/
-results/
+arch_ignore/
+# results/
 ovarian_xai/results/
 ovarian_xai/data/raw/
 
@@ -47,3 +48,18 @@ ENV/
 .settings/
 *.swp
 *.swo
+
+# Prompts and Plans
+*PROMPT.md
+*PLAN.md
+*_prompt.md
+*_plan.md
+
+# Validation and Checkpoints
+results/rerun_val/
+results/validation_run/
+results/checkpoints/
+
+ENHANCEMENT_PLAN.md
+GEMINI.md
+experiment_run.log

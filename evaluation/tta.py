@@ -67,6 +67,7 @@ class TTAEvaluator:
     @torch.no_grad()
     def predict(self, pil_image: Image.Image) -> np.ndarray:
         """Runs TTA inference and returns mean probability vector."""
+        self.model.eval()  # Guard: enforce eval mode on every predict call
         aug_tensors = self._get_aug_tensors(pil_image)
         batch = torch.stack(aug_tensors).to(self.device)
         
