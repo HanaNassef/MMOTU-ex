@@ -62,6 +62,49 @@ def create_patient_level_splits(metadata_df: pd.DataFrame, train_ratio: float = 
     # Drop the temporary column if added to df (we didn't modify original, just created merged)
     return metadata_df
 
+def create_kfold_splits(metadata_df: pd.DataFrame, n_splits: int = 5, random_state: int = 42) -> list[pd.DataFrame]:
+    """
+    Returns list of n_splits DataFrames each with 'split' and 'fold' columns.
+    Patient-level stratified using StratifiedGroupKFold.
+    Each fold: held-out set = test (~20% for 5-fold).
+    Remaining 80%: split into train (90%) and val (10%) at patient level.
+    """
+    # Sort patients by majority class
+    patient_majority_class = metadata_df.groupby('patient_id')['class_label'].agg(lambda x: x.mode()[0]).reset_index()
+    patient_majority_class.rename(columns={'class_label': 'majority_class'}, inplace=True)
+    merged_df = metadata_df.merge(patient_majority_class, on='patient_id', how='left')
+    
+    X = merged_df.index.values
+    y = merged_df['majority_class'].values
+    groups = merged_df['patient_id'].values
+    
+    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    
+    fold_dfs = []
+    
+    for fold_idx, (train_val_i, test_i) in enumerate(sgkf.split(X, y, groups)):
+        fold_df = metadata_df.copy()
+        fold_df['fold'] = fold_idx
+        fold_df['split'] = 'none'
+        
+        # Test is fixed for this fold
+        fold_df.loc[X[test_i], 'split'] = 'test'
+        
+        # Split train_val into train and val (90/10)
+        X_tv = X[train_val_i]
+        y_tv = y[train_val_i]
+        groups_tv = groups[train_val_i]
+        
+        sgkf_inner = StratifiedGroupKFold(n_splits=10, shuffle=True, random_state=random_state)
+        for train_i, val_i in sgkf_inner.split(X_tv, y_tv, groups_tv):
+            fold_df.loc[X_tv[train_i], 'split'] = 'train'
+            fold_df.loc[X_tv[val_i], 'split'] = 'val'
+            break # Just need one split
+            
+        fold_dfs.append(fold_df)
+        
+    return fold_dfs
+
 def load_splits(splits_csv: str):
     """Load the split CSV and return (train_df, val_df, test_df)."""
     df = pd.read_csv(splits_csv)

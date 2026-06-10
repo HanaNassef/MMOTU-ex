@@ -15,16 +15,21 @@ from evaluation.faithfulness import compute_insertion_deletion_auc
 class XAIRunner:
     def __init__(self, model, model_name: str, dataset_with_paths, config: any, device: torch.device, logger):
         self.model = model
-        self.model_name = model_name
+        self.model_name = model_name # This can be "densenet121_fold0"
         self.dataset = dataset_with_paths
         self.config = config
         self.device = device
         self.logger = logger
         
+        # Extract base model name for CAMExplainer (e.g. "densenet121")
+        base_model_name = model_name
+        if "_fold" in model_name:
+            base_model_name = model_name.split("_fold")[0]
+            
         # Disable inplace operations to prevent backward hook errors
         self._disable_inplace(self.model)
         
-        self.cam_explainer = CAMExplainer(model, model_name, device)
+        self.cam_explainer = CAMExplainer(model, base_model_name, device)
         self.grad_explainer = GradientExplainer(model, device)
         self.shap_explainer = None
 

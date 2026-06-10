@@ -3,7 +3,60 @@ import numpy as np
 from scipy.stats import wilcoxon, f_oneway, tukey_hsd
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
+from scipy.stats import wilcoxon, f_oneway, tukey_hsd, mannwhitneyu
+
 class StatisticalAnalyzer:
+    def correct_vs_incorrect_exbale(self, results_df: pd.DataFrame, 
+                                  cam_threshold: float = 0.5) -> pd.DataFrame:
+        """
+        Compares ExBale distributions between correctly and incorrectly classified images
+        for each XAI method at a specific threshold.
+        """
+        from statsmodels.stats.multitest import multipletests
+        
+        # Filter by threshold
+        df_thresh = results_df[results_df['cam_threshold'] == cam_threshold].copy()
+        
+        methods = df_thresh['xai_method'].unique()
+        stats_list = []
+        
+        for method in methods:
+            m_df = df_thresh[df_thresh['xai_method'] == method]
+            correct_exbale = m_df[m_df['is_correct'] == True]['exbale'].dropna()
+            incorrect_exbale = m_df[m_df['is_correct'] == False]['exbale'].dropna()
+            
+            if len(correct_exbale) < 2 or len(incorrect_exbale) < 2:
+                stats_list.append({
+                    "xai_method": method,
+                    "correct_mean": correct_exbale.mean() if not correct_exbale.empty else 0,
+                    "incorrect_mean": incorrect_exbale.mean() if not incorrect_exbale.empty else 0,
+                    "delta": (correct_exbale.mean() - incorrect_exbale.mean()) if not (correct_exbale.empty or incorrect_exbale.empty) else 0,
+                    "wilcoxon_p": 1.0
+                })
+                continue
+                
+            # Using Mann-Whitney U test as the groups are independent
+            res = mannwhitneyu(correct_exbale, incorrect_exbale, alternative='two-sided')
+            
+            stats_list.append({
+                "xai_method": method,
+                "correct_mean": correct_exbale.mean(),
+                "incorrect_mean": incorrect_exbale.mean(),
+                "delta": correct_exbale.mean() - incorrect_exbale.mean(),
+                "wilcoxon_p": res.pvalue
+            })
+            
+        stats_df = pd.DataFrame(stats_list)
+        
+        # Bonferroni correction
+        if not stats_df.empty:
+            p_vals = stats_df['wilcoxon_p'].values
+            rejected, p_corrected, _, _ = multipletests(p_vals, method='bonferroni')
+            stats_df['bonferroni_p'] = p_corrected
+            stats_df['significant'] = rejected
+            
+        return stats_df
+
     def compare_xai_methods(self, results_df: pd.DataFrame, metric: str = "exbale") -> dict:
         """
         Pairwise Wilcoxon signed-rank test between XAI methods.

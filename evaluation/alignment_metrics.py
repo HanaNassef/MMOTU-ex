@@ -62,6 +62,40 @@ def compute_exbale(sc: float, cc: float, wcis: float, wcis_global_min: float = 0
     
     return float((sc * cc * wcis_norm) ** (1.0 / 3.0))
 
+def compute_exbale_anchors(seg_masks: list[np.ndarray], n_samples: int = 100) -> dict:
+    """
+    Computes ExBale for two anchor cases: random noise and perfect alignment.
+    """
+    if not seg_masks:
+        return {"random_mean": 0, "random_std": 0, "perfect_mean": 1, "perfect_std": 0}
+        
+    n_samples = min(n_samples, len(seg_masks))
+    indices = np.random.choice(len(seg_masks), n_samples, replace=False)
+    
+    random_exbales = []
+    perfect_exbales = []
+    
+    for idx in indices:
+        mask = seg_masks[idx]
+        if mask.sum() == 0: continue
+        
+        # 1. Random Noise
+        random_cam = np.random.rand(*mask.shape)
+        res_rand = compute_all_metrics(random_cam, mask, [0.5], 0.0, 1.0)[0]
+        random_exbales.append(res_rand['exbale'])
+        
+        # 2. Perfect CAM
+        perfect_cam = mask.astype(float) / 255.0 if mask.max() > 1 else mask.astype(float)
+        res_perf = compute_all_metrics(perfect_cam, mask, [0.5], 0.0, 1.0)[0]
+        perfect_exbales.append(res_perf['exbale'])
+        
+    return {
+        "random_mean": float(np.mean(random_exbales)),
+        "random_std": float(np.std(random_exbales)),
+        "perfect_mean": float(np.mean(perfect_exbales)),
+        "perfect_std": float(np.std(perfect_exbales))
+    }
+
 def compute_all_metrics(cam_raw: np.ndarray, seg_mask: np.ndarray, thresholds: list[float], wcis_global_min: float, wcis_global_max: float) -> list[dict]:
     results = []
     

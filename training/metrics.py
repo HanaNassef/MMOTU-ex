@@ -34,5 +34,5 @@ def compute_classification_metrics(all_preds: np.ndarray, all_targets: np.ndarra
         "per_class_f1": f1_score(all_targets, all_preds, average=None, zero_division=0).tolist(),
         "per_class_auc_roc": per_class_auc_roc,
         "macro_auc_roc": macro_auc_roc,
-        "confusion_matrix": confusion_matrix(all_targets, all_preds, labels=list(range(num_classes)))
+        "confusion_matrix": confusion_matrix(all_targets, all_preds, labels=list(range(num_classes))).tolist()
     }

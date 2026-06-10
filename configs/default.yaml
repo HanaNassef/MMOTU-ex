@@ -13,6 +13,8 @@ experiment:
   random_seed: 42
   device: "auto"                        # "auto", "cuda", "cpu"
   use_amp: true                         # Mixed precision training
+  use_kfold: false
+  kfold_n_splits: 5
 
 # ── Training ───────────────────────────────────────────────────────────
 training:
@@ -36,6 +38,12 @@ training:
   label_smoothing: 0.1
   early_stopping_patience: 15
   early_stopping_metric: "macro_f1"
+  use_mixup: true
+  mixup_alpha: 0.4
+  cutmix_alpha: 1.0
+  use_swa: true
+  use_tta: true
+  use_ensemble: true
 
 # ── Gradient Safety ────────────────────────────────────────────────────
 gradient:

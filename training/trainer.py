@@ -66,6 +66,13 @@ class Trainer:
             {"params": head_params, "lr": config.lr_head, "weight_decay": config.weight_decay},
         ])
         
+        # SWA Initialization
+        from torch.optim.swa_utils import AveragedModel, SWALR
+        self.swa_model = AveragedModel(self.model)
+        self.swa_start_epoch = max(1, int(config.num_epochs * 0.75))
+        self.swa_scheduler = SWALR(self.optimizer, swa_lr=config.lr_backbone * 0.1, anneal_epochs=5)
+        self.use_swa = getattr(config, 'use_swa', True)
+        
         self.backbone_params = backbone_params
         
         # Loss function
@@ -119,6 +126,9 @@ class Trainer:
         all_preds, all_targets, all_probs = [], [], []
         grad_norms = []
         
+        from training.augmentation import mixup_data, cutmix_data, mixup_criterion
+        use_mixup = getattr(self.config, 'use_mixup', True)
+        
         for batch_idx, (images, _, labels) in enumerate(self.train_loader):
             if torch.isnan(images).any() or torch.isinf(images).any():
                 self.logger.warning(f"NaN/Inf in input batch {batch_idx}, skipping")
@@ -127,6 +137,17 @@ class Trainer:
                 
             images = images.to(self.device)
             labels = labels.to(self.device)
+            
+            # MixUp / CutMix Logic
+            aug_active = False
+            if use_mixup and epoch >= self.config.freeze_epochs:
+                r = np.random.rand()
+                if r < 0.5: # 50% MixUp
+                    images, labels_a, labels_b, lam = mixup_data(images, labels, alpha=getattr(self.config, 'mixup_alpha', 0.4), device=self.device)
+                    aug_active = True
+                elif r < 0.75: # 25% CutMix
+                    images, labels_a, labels_b, lam = cutmix_data(images, labels, alpha=getattr(self.config, 'cutmix_alpha', 1.0), device=self.device)
+                    aug_active = True
             
             self.optimizer.zero_grad()
             
@@ -137,8 +158,11 @@ class Trainer:
                     self.logger.warning(f"NaN in logits at batch {batch_idx}, skipping")
                     skipped_batches += 1
                     continue
-                    
-                loss = self.criterion(logits, labels)
+                
+                if aug_active:
+                    loss = mixup_criterion(self.criterion, logits, labels_a, labels_b, lam)
+                else:
+                    loss = self.criterion(logits, labels)
                 
                 if torch.isnan(loss) or torch.isinf(loss):
                     self.logger.warning(f"NaN/Inf loss={loss.item():.4f} at batch {batch_idx}, skipping")
@@ -240,6 +264,11 @@ class Trainer:
             
             scheduler.step()
             
+            # SWA Step
+            if self.use_swa and epoch >= self.swa_start_epoch:
+                self.swa_model.update_parameters(self.model)
+                self.swa_scheduler.step()
+            
             # Logging
             with open(log_csv_path, 'a') as f:
                 f.write(f"{epoch},{train_metrics['loss']},{val_metrics['loss']},{train_metrics['top1_acc']},{val_metrics['top1_acc']},{train_metrics['macro_f1']},{val_metrics['macro_f1']},{val_metrics['balanced_acc']},{lr_bb},{lr_h},{train_metrics['grad_norm_mean']},{train_metrics['grad_norm_max']},{train_metrics['skipped_batches']},{epoch_time}\n")
@@ -282,4 +311,15 @@ class Trainer:
                 self.logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
                 
+        # Finalize SWA
+        if self.use_swa:
+            from torch.optim.swa_utils import update_bn
+            self.logger.info("Updating Batch Norm for SWA...")
+            update_bn(self.train_loader, self.swa_model, device=self.device)
+            swa_path = Path(self.checkpoint_dir) / f"{self.run_name}_swa.pt"
+            # AveragedModel wraps the model in .module
+            torch.save({'model_state_dict': self.swa_model.module.state_dict()}, swa_path)
+            self.logger.info(f"SWA model saved: {swa_path}")
+            return str(swa_path)
+            
         return str(best_ckpt_path)

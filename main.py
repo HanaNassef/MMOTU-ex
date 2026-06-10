@@ -4,6 +4,7 @@ import argparse
 import yaml
 import torch
 import pandas as pd
+import numpy as np
 from pathlib import Path
 import logging
 import gc
@@ -13,13 +14,14 @@ import json
 from utils.logger import setup_logger
 from utils.reproducibility import setup_reproducibility
 from utils.checkpoint import load_checkpoint
-from data.splits import create_patient_level_splits, load_splits
+from data.splits import create_patient_level_splits, load_splits, create_kfold_splits
 from data.dataset import get_dataloaders, compute_class_weights, MMOTUDataset
 from models.factory import get_model
 from training.trainer import Trainer
 from xai.xai_runner import XAIRunner
 from evaluation.screening import ScreeningAnalyzer
 from evaluation.statistical_tests import StatisticalAnalyzer
+from evaluation.alignment_metrics import compute_exbale_anchors
 from visualization.plots import (
     plot_training_curves, plot_confusion_matrix, plot_backbone_comparison,
     plot_xai_comparison_violin, plot_threshold_heatmap, plot_exbale_vs_correctness,
@@ -50,6 +52,7 @@ def parse_args():
     parser.add_argument("--skip_training", action="store_true", help="Skip Stage 2")
     parser.add_argument("--models", type=str, default=None, help="Comma-separated list of models to run")
     parser.add_argument("--debug", action="store_true", help="Run in fast debug mode")
+    parser.add_argument("--kfold", action="store_true", help="Run with 5-fold cross-validation")
     return parser.parse_args()
 
 def setup_device(device_str: str) -> torch.device:
@@ -208,53 +211,95 @@ def main():
                 # subset for debug
                 metadata = metadata.sample(min(100, len(metadata)), random_state=config.experiment.random_seed).reset_index(drop=True)
 
-            splits_df = create_patient_level_splits(metadata)
-            splits_df.to_csv(config.data.splits_csv, index=False)
+            if args.kfold or getattr(config.experiment, 'use_kfold', False):
+                n_splits = getattr(config.experiment, 'kfold_n_splits', 5)
+                logger.info(f"Generating {n_splits}-fold splits...")
+                fold_dfs = create_kfold_splits(metadata, n_splits=n_splits)
+                for i, f_df in enumerate(fold_dfs):
+                    f_df.to_csv(f"{config.output.results_dir}/splits_fold{i}.csv", index=False)
+                # Set default splits_csv to fold 0 for subsequent steps if not looping
+                splits_df = fold_dfs[0]
+                splits_df.to_csv(config.data.splits_csv, index=False)
+            else:
+                splits_df = create_patient_level_splits(metadata)
+                splits_df.to_csv(config.data.splits_csv, index=False)
             
         train_df, val_df, test_df = load_splits(config.data.splits_csv)
         class_weights = compute_class_weights(train_df)
         logger.info(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
         
         # Pre-compute wcis stats for normalization
-        # We can approximate this by running WCIS on test set masks if available, but let's just save defaults.
         with open(Path(config.output.results_dir) / "wcis_normalization_stats.json", 'w') as f:
             json.dump({"wcis_global_min": 0.0, "wcis_global_max": 1.0}, f)
+
+        # Compute ExBale Anchors
+        logger.info("Computing ExBale anchors...")
+        val_transform = transforms.Compose([
+            transforms.Resize((config.data.image_size, config.data.image_size)),
+            transforms.ToTensor()
+        ])
+        test_dataset = MMOTUDataset(test_df, transform=val_transform, mask_transform=val_transform)
+        test_masks = []
+        for i in range(min(100, len(test_dataset))):
+            _, mask, _ = test_dataset[i]
+            test_masks.append(mask.numpy().squeeze() * 255.0)
+            
+        anchor_stats = compute_exbale_anchors(test_masks)
+        with open(Path(config.output.results_dir) / "exbale_anchors.json", 'w') as f:
+            json.dump(anchor_stats, f, indent=4)
+        logger.info(f"ExBale anchors saved: {anchor_stats}")
             
     # ── Stage 2: Training ──
     trained_models = {}
     if run_stage(2) and not args.skip_training:
         logger.info("=" * 60)
         logger.info("Stage 2: Training")
-        train_df, val_df, test_df = load_splits(config.data.splits_csv)
-        class_weights = compute_class_weights(train_df)
         
-        for model_name in config.training.models_to_train:
-            run_name = f"{config.experiment.run_name}_{model_name}"
-            logger.info(f"=== Training {model_name} ===")
-            
-            model, in_features = get_model(model_name, num_classes=config.training.num_classes, dropout=config.training.dropout)
-            model = model.to(device)
-            
-            logger.info(f"Model {model_name} created. Head in_features: {in_features}")
-            
-            # Inject experiment/gradient configs into training config for Trainer
-            config.training.use_amp = config.experiment.use_amp
-            config.training.gradient = config.gradient
-            
-            train_loader, val_loader, test_loader = get_dataloaders(config.data.splits_csv, config)
-            
-            trainer = Trainer(model, train_loader, val_loader, config.training, device, logger, config.output.checkpoints_dir, run_name, class_weights=class_weights)
-            
-            if args.resume:
-                # Implement resume logic if path provided
-                pass
+        n_folds = getattr(config.experiment, 'kfold_n_splits', 5) if (args.kfold or getattr(config.experiment, 'use_kfold', False)) else 1
+        
+        for fold in range(n_folds):
+            if n_folds > 1:
+                logger.info(f"--- Training Fold {fold} ---")
+                splits_path = f"{config.output.results_dir}/splits_fold{fold}.csv"
+            else:
+                splits_path = config.data.splits_csv
                 
-            best_ckpt_path = trainer.train()
-            trained_models[model_name] = best_ckpt_path
-            logger.info(f"Best checkpoint saved: {best_ckpt_path}")
+            train_df, val_df, _ = load_splits(splits_path)
+            class_weights = compute_class_weights(train_df)
             
-            torch.cuda.empty_cache()
-            gc.collect()
+            for model_name in config.training.models_to_train:
+                run_name = f"{config.experiment.run_name}_{model_name}"
+                if n_folds > 1:
+                    run_name += f"_fold{fold}"
+                    
+                logger.info(f"=== Training {model_name} (Fold {fold}) ===")
+                
+                model, in_features = get_model(model_name, num_classes=config.training.num_classes, dropout=config.training.dropout)
+                model = model.to(device)
+                
+                # Inject configs
+                config.training.use_amp = config.experiment.use_amp
+                config.training.gradient = config.gradient
+                
+                # New Enhancement Flags
+                config.training.use_mixup = getattr(config.training, 'use_mixup', True)
+                config.training.use_swa = getattr(config.training, 'use_swa', True)
+                
+                train_loader, val_loader, _ = get_dataloaders(splits_path, config)
+                
+                trainer = Trainer(model, train_loader, val_loader, config.training, device, logger, config.output.checkpoints_dir, run_name, class_weights=class_weights)
+                
+                best_ckpt_path = trainer.train()
+                
+                if n_folds == 1:
+                    trained_models[model_name] = best_ckpt_path
+                else:
+                    trained_models[f"{model_name}_fold{fold}"] = best_ckpt_path
+                    
+                logger.info(f"Best checkpoint saved: {best_ckpt_path}")
+                
+                torch.cuda.empty_cache()
+                gc.collect()
             
     elif args.skip_training:
         # Populate trained_models from existing files
@@ -287,13 +332,19 @@ def main():
         # Inject wcis path into config dynamically
         config.xai.wcis_stats_path = str(Path(config.output.results_dir) / "wcis_normalization_stats.json")
         
-        for model_name, ckpt_path in trained_models.items():
-            logger.info(f"=== XAI for {model_name} ===")
-            model, _ = get_model(model_name, num_classes=config.training.num_classes)
+        for trained_key, ckpt_path in trained_models.items():
+            logger.info(f"=== XAI for {trained_key} ===")
+            
+            # Extract base model name for get_model
+            base_model_name = trained_key
+            if "_fold" in trained_key:
+                base_model_name = trained_key.split("_fold")[0]
+                
+            model, _ = get_model(base_model_name, num_classes=config.training.num_classes)
             load_checkpoint(ckpt_path, model)
             model = model.to(device).eval()
             
-            xai_runner = XAIRunner(model, model_name, test_dataset_with_paths, config.xai, device, logger)
+            xai_runner = XAIRunner(model, trained_key, test_dataset_with_paths, config.xai, device, logger)
             
             if config.xai.run_shap:
                 train_df, _, _ = load_splits(config.data.splits_csv)
@@ -305,6 +356,35 @@ def main():
             
             torch.cuda.empty_cache()
             gc.collect()
+
+    # ── Stage 3.5: Ensemble Evaluation ──
+    if (run_stage(3) or run_stage(4)) and len(trained_models) > 1 and getattr(config.training, 'use_ensemble', True):
+        logger.info("=" * 60)
+        logger.info("Stage 3.5: Ensemble Evaluation")
+        from evaluation.ensemble import build_ensemble_from_checkpoints
+        from training.metrics import compute_classification_metrics
+        
+        _, _, test_df = load_splits(config.data.splits_csv)
+        val_transform = transforms.Compose([
+            transforms.Resize((config.data.image_size, config.data.image_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        test_dataset = MMOTUDataset(test_df, transform=val_transform, return_path=True)
+        
+        ensemble = build_ensemble_from_checkpoints(trained_models, config.training.models_to_train, config, device)
+        if len(ensemble.models) > 0:
+            probs, labels, _ = ensemble.predict_dataset(test_dataset)
+            preds = np.argmax(probs, axis=1)
+            metrics = compute_classification_metrics(preds, labels, probs, num_classes=config.training.num_classes)
+            
+            logger.info(f"Ensemble Test Top-1: {metrics['top1_acc']:.4f}")
+            logger.info(f"Ensemble Test Macro F1: {metrics['macro_f1']:.4f}")
+            
+            # Save ensemble results
+            ensemble_res_path = Path(config.output.results_dir) / "ensemble_metrics.json"
+            with open(ensemble_res_path, 'w') as f:
+                json.dump(metrics, f, indent=4)
 
     # If skipping early stages but wanting later stages, load XAI results
     if not run_stage(3) and (run_stage(4) or run_stage(5) or run_stage(6)):
@@ -321,6 +401,36 @@ def main():
         all_sweeps = {}
         all_per_class = {}
         
+        # TTA Evaluation Pass
+        if getattr(config.training, 'use_tta', True):
+            logger.info("Running Test-Time Augmentation (TTA) Evaluation...")
+            from evaluation.tta import compute_tta_predictions
+            from training.metrics import compute_classification_metrics
+            
+            _, _, test_df = load_splits(config.data.splits_csv)
+            test_dataset_with_paths = MMOTUDataset(test_df, return_path=True)
+            
+            tta_results = {}
+            for trained_key, ckpt_path in trained_models.items():
+                logger.info(f"TTA for {trained_key}...")
+                
+                base_model_name = trained_key
+                if "_fold" in trained_key:
+                    base_model_name = trained_key.split("_fold")[0]
+                    
+                model, _ = get_model(base_model_name, num_classes=config.training.num_classes)
+                load_checkpoint(ckpt_path, model)
+                model = model.to(device).eval()
+                
+                probs, labels, _ = compute_tta_predictions(model, test_dataset_with_paths, device)
+                preds = np.argmax(probs, axis=1)
+                metrics = compute_classification_metrics(preds, labels, probs, num_classes=config.training.num_classes)
+                tta_results[trained_key] = metrics
+                logger.info(f"{trained_key} TTA Top-1: {metrics['top1_acc']:.4f}")
+                
+            with open(Path(config.output.results_dir) / "tta_classification_results.json", 'w') as f:
+                json.dump(tta_results, f, indent=4)
+
         for model_name, results_df in all_xai_results.items():
             if results_df.empty: continue
             logger.info(f"=== Evaluating {model_name} ===")
@@ -341,6 +451,12 @@ def main():
             
             all_sweeps[model_name] = sweep_df
             all_per_class[model_name] = per_class
+            
+            # Enhancement 7: Correct vs Incorrect ExBale
+            stat = StatisticalAnalyzer()
+            logger.info(f"Running correct vs incorrect ExBale analysis for {model_name}...")
+            cvs_df = stat.correct_vs_incorrect_exbale(results_df, cam_threshold=0.5)
+            cvs_df.to_csv(f"{config.output.results_dir}/{model_name}_correct_vs_incorrect.csv", index=False)
             
         # Statistical Tests
         stat = StatisticalAnalyzer()
