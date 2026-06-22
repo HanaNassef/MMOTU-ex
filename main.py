@@ -28,6 +28,7 @@ from visualization.plots import (
     plot_screening_results_table, plot_per_class_alignment, plot_roc_curves,
     plot_insertion_deletion, plot_grad_norm_history
 )
+from visualization.cam_viz import save_qualitative_comparison_figure
 from visualization.report import generate_summary_report
 from torchvision import transforms
 
@@ -161,6 +162,110 @@ def load_or_discover_metadata(data_config) -> pd.DataFrame:
     df = pd.DataFrame(data)
     print(f"Discovered {len(df)} images.")
     return df
+
+
+def _resolve_first_matching_key(mapping: dict, base_name: str) -> str | None:
+    if base_name in mapping:
+        return base_name
+    for key in mapping:
+        if key.startswith(f"{base_name}_fold"):
+            return key
+    return None
+
+
+def generate_qualitative_comparison_figure(all_xai_results, trained_models, config, device, logger):
+    swin_key = _resolve_first_matching_key(all_xai_results, "swin_t")
+    if not swin_key:
+        logger.warning("No Swin Transformer XAI results available for qualitative figure generation.")
+        return
+
+    result_df = all_xai_results[swin_key].copy()
+    if "cam_threshold" in result_df.columns:
+        filtered_df = result_df[result_df["cam_threshold"] == 0.5].copy()
+        if filtered_df.empty:
+            filtered_df = result_df
+    else:
+        filtered_df = result_df
+
+    high_row = filtered_df[filtered_df["xai_method"] == "eigencam"].sort_values("exbale", ascending=False).head(1)
+    low_row = filtered_df[filtered_df["xai_method"] == "gradcam"].sort_values("exbale", ascending=True).head(1)
+
+    if high_row.empty or low_row.empty:
+        logger.warning("Could not find high ExBale eigencam and low ExBale gradcam rows for the qualitative figure.")
+        return
+
+    checkpoint_key = _resolve_first_matching_key(trained_models, swin_key)
+    if not checkpoint_key:
+        logger.warning(f"No checkpoint found for {swin_key}; skipping qualitative figure generation.")
+        return
+
+    from PIL import Image
+    from torchvision import transforms as _transforms
+    from xai.cam_methods import CAMExplainer
+    from xai.gradient_methods import GradientExplainer
+
+    from models.factory import get_model
+    from utils.checkpoint import load_checkpoint
+
+    model, _ = get_model("swin_t", num_classes=config.training.num_classes)
+    load_checkpoint(trained_models[checkpoint_key], model)
+    model = model.to(device).eval()
+
+    cam_explainer = CAMExplainer(model, "swin_t", device)
+    grad_explainer = GradientExplainer(model, device)
+
+    image_size = config.data.image_size
+    image_transform = _transforms.Compose([
+        _transforms.Resize((image_size, image_size)),
+        _transforms.ToTensor(),
+        _transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    mask_transform = _transforms.Compose([
+        _transforms.Resize((image_size, image_size), interpolation=_transforms.InterpolationMode.NEAREST),
+        _transforms.ToTensor()
+    ])
+    display_resize = _transforms.Resize((image_size, image_size))
+
+    def build_row(row, row_label: str):
+        image_path = row["image_path"]
+        mask_path = row.get("mask_path")
+        pred_class = int(row["predicted_class"])
+
+        image_pil = Image.open(image_path).convert("RGB")
+        display_image = np.array(display_resize(image_pil))
+        model_input = image_transform(image_pil).unsqueeze(0).to(device)
+
+        if mask_path and isinstance(mask_path, str) and Path(mask_path).exists():
+            mask_pil = Image.open(mask_path).convert("L")
+        else:
+            mask_pil = Image.new("L", image_pil.size, 0)
+        display_mask = np.array(mask_transform(display_resize(mask_pil)).squeeze().cpu().numpy() > 0, dtype=np.uint8) * 255
+
+        cams = {
+            "gradcam": cam_explainer.compute_cam(model_input, pred_class, "gradcam"),
+            "scorecam": cam_explainer.compute_cam(model_input, pred_class, "scorecam"),
+            "eigencam": cam_explainer.compute_cam(model_input, pred_class, "eigencam"),
+            "saliency": grad_explainer.compute_saliency(model_input.clone(), pred_class),
+        }
+
+        return {
+            "image": display_image,
+            "mask": display_mask,
+            "cams": cams,
+            "row_label": row_label,
+        }
+
+    high_example = high_row.iloc[0]
+    low_example = low_row.iloc[0]
+
+    rows = [
+        build_row(high_example, f"High ExBale\nSwin Transformer Eigen CAM\nExBale = {high_example['exbale']:.2f}"),
+        build_row(low_example, f"Low ExBale\nSwin Transformer Grad CAM\nExBale = {low_example['exbale']:.2f}"),
+    ]
+
+    save_path = Path(config.output.figures_dir) / "qualitative_comparison.pdf"
+    save_qualitative_comparison_figure(rows, str(save_path))
+    logger.info(f"Saved qualitative comparison figure to {save_path}")
 
 def main():
     args = parse_args()
@@ -531,6 +636,7 @@ def main():
                 
         if all_xai_results:
             plot_backbone_comparison(all_xai_results, save_path=f"{config.output.figures_dir}/backbone_comparison.png")
+            generate_qualitative_comparison_figure(all_xai_results, trained_models, config, device, logger)
             
     # ── Stage 6: Summary ──
     if run_stage(6):
