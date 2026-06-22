@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def overlay_cam_on_image(original_img_np: np.ndarray, cam_np: np.ndarray, seg_mask_np: np.ndarray, alpha: float = 0.5) -> np.ndarray:
+def overlay_cam_on_image(?
     """
     Overlays CAM heatmap (jet) and Segmentation mask contour on the image.
     """

@@ -521,7 +521,7 @@ def main():
             sweep_path = Path(config.output.results_dir) / f"{model_name}_threshold_sweep.csv"
             if sweep_path.exists():
                 sweep_df = pd.read_csv(sweep_path)
-                plot_threshold_heatmap(sweep_df, save_path=f"{config.output.figures_dir}/{model_name}_threshold_heatmap.png")
+                plot_threshold_heatmap(sweep_df, save_path=f"{config.output.figures_dir}/{model_name}_threshold_heatmap.pdf")
                 plot_screening_results_table(sweep_df, save_path=f"{config.output.figures_dir}/{model_name}_screening_table.png")
                 
             per_class_path = Path(config.output.results_dir) / f"{model_name}_per_class_reliability.csv"

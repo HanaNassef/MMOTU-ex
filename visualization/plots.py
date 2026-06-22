@@ -79,7 +79,9 @@ def plot_threshold_heatmap(sweep_df: pd.DataFrame, metric: str = "f1_screening",
     pivot = sweep_df.pivot(index='sc_thresh', columns='cc_thresh', values=metric)
     plt.figure(figsize=(8, 6))
     sns.heatmap(pivot, annot=True, cmap='Blues', fmt=".3f")
-    plt.title(f'{metric} for Threshold Sweeps')
+    plt.xlabel('CAM Containment (CC) Threshold\n(Proportion of CAM inside Ground Truth)')
+    plt.ylabel('Segmentation Coverage (SC) Threshold\n(Proportion of Ground Truth covered by CAM)')
+    plt.title(f'Screening Performance ({metric}) across SC/CC Thresholds')
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
