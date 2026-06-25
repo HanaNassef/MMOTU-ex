@@ -5249,3 +5249,124 @@
 2026-06-10 19:46:52 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for swin_t...
 2026-06-10 19:46:52 - exp_001 - INFO - Statistical Tests computed for DenseNet121.
 2026-06-10 19:46:53 - exp_001 - INFO - === Pipeline complete ===
+2026-06-22 14:33:52 - exp_001 - INFO - ============================================================
+2026-06-22 14:33:52 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-22 14:33:52 - exp_001 - INFO - ============================================================
+2026-06-22 14:33:52 - exp_001 - INFO - Stage 5: Visualization
+2026-06-22 14:35:01 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-22 14:35:01 - exp_001 - INFO - === Pipeline complete ===
+2026-06-22 15:04:45 - exp_001 - INFO - ============================================================
+2026-06-22 15:04:45 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-22 15:04:45 - exp_001 - INFO - ============================================================
+2026-06-22 15:04:45 - exp_001 - INFO - Stage 5: Visualization
+2026-06-22 15:05:16 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-06-22 15:05:32 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-06-22 15:05:43 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-06-22 15:05:49 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-06-22 15:06:00 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-22 15:06:02 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-06-22 15:06:02 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-06-22 15:06:02 - exp_001 - INFO - === Pipeline complete ===
+2026-06-22 15:11:36 - exp_001 - INFO - ============================================================
+2026-06-22 15:11:36 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-22 15:11:36 - exp_001 - INFO - ============================================================
+2026-06-22 15:11:36 - exp_001 - INFO - Stage 5: Visualization
+2026-06-22 15:12:05 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-06-22 15:12:22 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-06-22 15:12:34 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-06-22 15:12:38 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-06-22 15:12:49 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-22 15:12:51 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-06-22 15:12:51 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-06-22 15:12:51 - exp_001 - INFO - === Pipeline complete ===
+2026-06-22 15:19:01 - exp_001 - INFO - ============================================================
+2026-06-22 15:19:01 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-22 15:19:01 - exp_001 - INFO - ============================================================
+2026-06-22 15:19:01 - exp_001 - INFO - Stage 5: Visualization
+2026-06-22 15:19:31 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-06-22 15:19:47 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-06-22 15:19:58 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-06-22 15:20:03 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-06-22 15:20:14 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-22 15:20:16 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-06-22 15:20:16 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-06-22 15:20:16 - exp_001 - INFO - === Pipeline complete ===
+2026-06-25 13:56:45 - exp_001 - INFO - ============================================================
+2026-06-25 13:56:45 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-25 13:56:45 - exp_001 - INFO - ============================================================
+2026-06-25 13:56:45 - exp_001 - INFO - Stage 3: XAI Generation
+2026-06-25 13:56:45 - exp_001 - INFO - === XAI for densenet121 ===
+2026-06-25 14:14:19 - exp_001 - INFO - === XAI for resnet50 ===
+2026-06-25 16:14:34 - exp_001 - INFO - ============================================================
+2026-06-25 16:14:34 - exp_001 - INFO - Stage 3.5: Ensemble Evaluation
+2026-06-25 16:22:34 - exp_001 - INFO - ============================================================
+2026-06-25 16:22:34 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-25 16:22:34 - exp_001 - INFO - ============================================================
+2026-06-25 16:22:34 - exp_001 - INFO - Stage 3: XAI Generation
+2026-06-25 16:22:34 - exp_001 - INFO - === XAI for densenet121 ===
+2026-06-25 16:39:38 - exp_001 - INFO - === XAI for resnet50 ===
+2026-06-25 17:19:09 - exp_001 - INFO - === XAI for efficientnet_b3 ===
+2026-06-25 17:54:33 - exp_001 - INFO - === XAI for mobilenet_v3_large ===
+2026-06-25 18:08:02 - exp_001 - INFO - === XAI for swin_t ===
+2026-06-25 18:39:59 - exp_001 - INFO - ============================================================
+2026-06-25 18:39:59 - exp_001 - INFO - Stage 3.5: Ensemble Evaluation
+2026-06-25 18:40:30 - exp_001 - INFO - Ensemble Test Top-1: 0.7857
+2026-06-25 18:40:30 - exp_001 - INFO - Ensemble Test Macro F1: 0.7436
+2026-06-25 18:40:30 - exp_001 - INFO - === Pipeline complete ===
+2026-06-25 18:40:39 - exp_001 - INFO - ============================================================
+2026-06-25 18:40:39 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-25 18:40:39 - exp_001 - INFO - ============================================================
+2026-06-25 18:40:39 - exp_001 - INFO - Stage 3.5: Ensemble Evaluation
+2026-06-25 18:41:13 - exp_001 - INFO - Ensemble Test Top-1: 0.7857
+2026-06-25 18:41:13 - exp_001 - INFO - Ensemble Test Macro F1: 0.7436
+2026-06-25 18:41:13 - exp_001 - INFO - ============================================================
+2026-06-25 18:41:13 - exp_001 - INFO - Stage 4: Evaluation
+2026-06-25 18:41:13 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_densenet121_swa.pt
+2026-06-25 18:41:30 - exp_001 - INFO - TTA densenet121: Top1=0.7245 F1=0.6695
+2026-06-25 18:41:30 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_resnet50_swa.pt
+2026-06-25 18:41:46 - exp_001 - INFO - TTA resnet50: Top1=0.7449 F1=0.6789
+2026-06-25 18:41:46 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_efficientnet_b3_swa.pt
+2026-06-25 18:42:03 - exp_001 - INFO - TTA efficientnet_b3: Top1=0.7007 F1=0.6418
+2026-06-25 18:42:03 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_mobilenet_v3_large_swa.pt
+2026-06-25 18:42:14 - exp_001 - INFO - TTA mobilenet_v3_large: Top1=0.7245 F1=0.6615
+2026-06-25 18:42:14 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_swin_t_swa.pt
+2026-06-25 18:42:31 - exp_001 - INFO - TTA swin_t: Top1=0.7653 F1=0.7140
+2026-06-25 18:42:32 - exp_001 - INFO - === Evaluating densenet121 ===
+2026-06-25 18:42:32 - exp_001 - INFO - Optimal thresholds: SC<0.1, CC<0.5
+2026-06-25 18:42:32 - exp_001 - INFO - ExBale ROC-AUC: 0.5421
+2026-06-25 18:42:32 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for densenet121...
+2026-06-25 18:42:32 - exp_001 - INFO - === Evaluating resnet50 ===
+2026-06-25 18:42:32 - exp_001 - INFO - Optimal thresholds: SC<0.3, CC<0.3
+2026-06-25 18:42:32 - exp_001 - INFO - ExBale ROC-AUC: 0.5077
+2026-06-25 18:42:32 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for resnet50...
+2026-06-25 18:42:32 - exp_001 - INFO - === Evaluating efficientnet_b3 ===
+2026-06-25 18:42:32 - exp_001 - INFO - Optimal thresholds: SC<0.3, CC<0.3
+2026-06-25 18:42:32 - exp_001 - INFO - ExBale ROC-AUC: 0.5537
+2026-06-25 18:42:32 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for efficientnet_b3...
+2026-06-25 18:42:32 - exp_001 - INFO - === Evaluating mobilenet_v3_large ===
+2026-06-25 18:42:32 - exp_001 - INFO - Optimal thresholds: SC<0.1, CC<0.4
+2026-06-25 18:42:32 - exp_001 - INFO - ExBale ROC-AUC: 0.5703
+2026-06-25 18:42:32 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for mobilenet_v3_large...
+2026-06-25 18:42:32 - exp_001 - INFO - === Evaluating swin_t ===
+2026-06-25 18:42:32 - exp_001 - INFO - Optimal thresholds: SC<0.2, CC<0.6
+2026-06-25 18:42:32 - exp_001 - INFO - ExBale ROC-AUC: 0.5285
+2026-06-25 18:42:32 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for swin_t...
+2026-06-25 18:42:32 - exp_001 - INFO - Statistical Tests computed for DenseNet121.
+2026-06-25 18:42:33 - exp_001 - INFO - === Pipeline complete ===
+2026-06-25 18:45:58 - exp_001 - INFO - ============================================================
+2026-06-25 18:45:58 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-25 18:45:59 - exp_001 - INFO - ============================================================
+2026-06-25 18:45:59 - exp_001 - INFO - Stage 5: Visualization
+2026-06-25 18:46:33 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-06-25 18:46:49 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-06-25 18:47:01 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-06-25 18:47:07 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-06-25 18:47:19 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-25 18:47:21 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-06-25 18:47:21 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-06-25 18:47:21 - exp_001 - INFO - === Pipeline complete ===
+2026-06-25 18:47:31 - exp_001 - INFO - ============================================================
+2026-06-25 18:47:31 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-25 18:47:31 - exp_001 - INFO - ============================================================
+2026-06-25 18:47:31 - exp_001 - INFO - Stage 6: Summary Report
+2026-06-25 18:47:31 - exp_001 - INFO - === Pipeline complete ===
