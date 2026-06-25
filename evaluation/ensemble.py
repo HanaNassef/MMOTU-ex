@@ -59,8 +59,10 @@ class ModelEnsemble:
         all_paths = []
         
         for i in tqdm(range(len(dataset)), desc="Ensemble Inference"):
-            # MMOTUDataset returns (image, mask, label, path)
-            img, _, label, path = dataset[i]
+            # MMOTUDataset may return either (image, mask, label) or
+            # (image, mask, label, image_path, mask_path) when return_path=True.
+            sample = dataset[i]
+            img, _, label, path = sample[:4]
             probs = self.predict(img)
             
             all_probs.append(probs)
