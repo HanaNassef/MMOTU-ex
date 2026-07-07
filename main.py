@@ -644,12 +644,7 @@ def main():
             config=config,
             device=device
         )
-        logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")
-
-    # ── Stage 5: Visualizations ──
-    if run_stage(5):
-        logger.info("=" * 60)
-        logger.info("Stage 5: Visualization")   
+        logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")  
     
     
     # ── Stage 5: Visualizations ──
