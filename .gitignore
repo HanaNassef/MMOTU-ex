@@ -57,8 +57,6 @@ ENV/
 # Validation and Checkpoints
 results/rerun_val/
 results/validation_run/
-results/checkpoints/
-
 ENHANCEMENT_PLAN.md
 GEMINI.md
 experiment_run.log
