@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from pathlib import Path
 
-# Import data loader function
+# Import your existing data loader function
 from data.dataset import get_dataloaders
 
 from .calibration import TemperatureScaler, expected_calibration_error
@@ -13,6 +13,13 @@ from .conformal import MondrianAPSConformalPredictor, evaluate_conformal_sets
 from .selective_prediction import risk_coverage_curve
 from .estimators import MCDropoutEstimator
 from .uncertainty_stats import compute_per_image_risk_contributions, run_repeated_measures_tests
+
+from visualization.uncertainty_plots import (
+    plot_reliability_diagram,
+    plot_risk_coverage_curves,
+    plot_coverage_per_class,
+    plot_set_size_distribution
+)
 
 def _get_logits_and_labels(model, dataloader, device):
     """Helper function to collect logits and labels over a dataloader"""
@@ -33,6 +40,14 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
 
     summary_data = []
     risk_contributions_by_model = {}
+    
+
+    rc_curves_by_backbone = {}
+    conformal_eval_by_backbone = {}
+    pred_sets_by_backbone = {}
+    
+    figures_dir = Path(config.output.figures_dir)
+    figures_dir.mkdir(parents=True, exist_ok=True)
     
     for model_name, model in trained_models.items():
         # 2. Run forward pass on Val split
@@ -55,6 +70,15 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
         # 6. Evaluation (ECE)
         ece_pre = expected_calibration_error(test_raw_probs, test_labels, config.uncertainty.ece_n_bins)
         ece_post = expected_calibration_error(test_calibrated_probs, test_labels, config.uncertainty.ece_n_bins)
+
+        #  Draw the Reliability Diagram for this specific model right now
+        plot_reliability_diagram(
+            test_raw_probs, 
+            test_calibrated_probs, 
+            test_labels, 
+            str(figures_dir / f"{model_name}_reliability.png"),
+            n_bins=config.uncertainty.ece_n_bins
+        )
 
         # 7. Alpha Sweep (0.05, 0.10, 0.20)
         for current_alpha in config.uncertainty.alpha_sweep:
@@ -94,14 +118,24 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
                 "AURC_MC_Dropout": rc_curve_mc["aurc"]
             })
             
-            # Output JSON for the primary alpha (0.10) to avoid overwriting
+            # Capture the data we need for the group charts (only keeping the main 0.10 alpha data)
             if current_alpha == 0.10:
                 with open(f"results/{model_name}_riskcoverage.json", "w") as f:
                     json.dump(rc_curve_softmax, f)
+                
+                # Save the numbers in our boxes
+                rc_curves_by_backbone[model_name] = rc_curve_softmax
+                conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval["per_class_coverage"]}
+                pred_sets_by_backbone[model_name] = pred_sets
         
         # Store for stats (using the calibrated probabilities)
         risk_contributions_by_model[model_name] = compute_per_image_risk_contributions(test_calibrated_probs, test_labels)
             
+    # Draw the three big comparison charts using the boxes
+    plot_risk_coverage_curves(rc_curves_by_backbone, str(figures_dir / "all_risk_coverage.png"))
+    plot_coverage_per_class(conformal_eval_by_backbone, str(figures_dir / "all_class_coverage.png"), alpha=0.10)
+    plot_set_size_distribution(pred_sets_by_backbone, str(figures_dir / "all_set_sizes.png"))
+
     # 9. Write DataFrames
     summary_df = pd.DataFrame(summary_data)
     summary_df.to_csv("results/uncertainty_conformal_summary.csv", index=False)
