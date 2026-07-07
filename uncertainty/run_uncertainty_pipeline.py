@@ -5,9 +5,7 @@ import torch
 import torch.nn.functional as F
 from pathlib import Path
 
-# Local imports (assuming available in your codebase)
-# from utils.checkpoint import load_checkpoint
-# from data.splits import load_splits
+
 from .calibration import TemperatureScaler, expected_calibration_error
 from .conformal import MondrianAPSConformalPredictor, evaluate_conformal_sets
 from .selective_prediction import risk_coverage_curve
@@ -27,7 +25,7 @@ def _get_logits_and_labels(model, dataloader, device):
     return np.vstack(all_logits), np.concatenate(all_labels)
 
 def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.device, alpha: float):
-    # Note: Requires initializing your val_loader and test_loader here from existing splits
+
     summary_data = []
     risk_contributions_by_model = {}
     
@@ -63,8 +61,7 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
         
         # 7. MC Dropout 
         mc_estimator = MCDropoutEstimator(model, device, n_samples=config.uncertainty.mc_dropout_samples)
-        # Note: You would batch this in production
-        # mc_results = mc_estimator.predict(test_images_batch) 
+
         
         # Log to summary
         summary_data.append({
