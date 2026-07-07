@@ -630,6 +630,28 @@ def main():
             if not backbone_comparison['tukey_results_df'].empty:
                 backbone_comparison['tukey_results_df'].to_csv(f"{config.output.results_dir}/backbone_tukey_hsd.csv", index=False)
 
+
+    # ── Stage 4.5: Uncertainty Quantification and Conformal Risk Control ──
+    if run_stage(4) and trained_models:
+        logger.info("=" * 60)
+        logger.info("Stage 4.5: Uncertainty Quantification and Conformal Risk Control")
+        
+        # We import it here so it doesn't clutter the top of your file
+        from uncertainty.run_uncertainty_pipeline import run_uncertainty_pipeline
+
+        uncertainty_df = run_uncertainty_pipeline(
+            trained_models=trained_models,
+            config=config,
+            device=device
+        )
+        logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")
+
+    # ── Stage 5: Visualizations ──
+    if run_stage(5):
+        logger.info("=" * 60)
+        logger.info("Stage 5: Visualization")   
+    
+    
     # ── Stage 5: Visualizations ──
     if run_stage(5):
         logger.info("=" * 60)
