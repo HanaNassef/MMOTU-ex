@@ -79,3 +79,11 @@ output:
   figures_dir: "results/figures"
   xai_results_dir: "results/xai"
   viz_dir: "results/visualizations"
+
+
+# ── uncertainty ─────────────────────────────────────────────────────────
+  uncertainty:
+  alpha_sweep: [0.05, 0.10, 0.20]
+  mc_dropout_samples: 30
+  min_calibration_per_class: 10
+  ece_n_bins: 15
