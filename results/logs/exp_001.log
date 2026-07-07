@@ -5370,3 +5370,15 @@
 2026-06-25 18:47:31 - exp_001 - INFO - ============================================================
 2026-06-25 18:47:31 - exp_001 - INFO - Stage 6: Summary Report
 2026-06-25 18:47:31 - exp_001 - INFO - === Pipeline complete ===
+2026-06-30 20:33:28 - exp_001 - INFO - ============================================================
+2026-06-30 20:33:28 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-06-30 20:33:28 - exp_001 - INFO - ============================================================
+2026-06-30 20:33:28 - exp_001 - INFO - Stage 5: Visualization
+2026-06-30 20:34:17 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-06-30 20:34:33 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-06-30 20:34:44 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-06-30 20:34:49 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-06-30 20:35:00 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-06-30 20:35:03 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-06-30 20:35:03 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-06-30 20:35:03 - exp_001 - INFO - === Pipeline complete ===
