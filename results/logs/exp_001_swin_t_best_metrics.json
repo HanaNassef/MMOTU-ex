@@ -1,9 +1,9 @@
 {
-    "best_epoch": 48,
-    "best_val_macro_f1": 0.7009593945725956,
-    "best_val_top1_acc": 0.7787234042553192,
-    "best_val_top2_acc": 0.8808510899543762,
-    "best_val_balanced_acc": 0.6976252913752914,
+    "best_epoch": 39,
+    "best_val_macro_f1": 0.6888114013348511,
+    "best_val_top1_acc": 0.774468085106383,
+    "best_val_top2_acc": 0.8893616795539856,
+    "best_val_balanced_acc": 0.6873557989629417,
     "run_name": "exp_001_swin_t",
-    "timestamp": "2026-06-10 16:42:53"
+    "timestamp": "2026-07-08 00:23:57"
 }

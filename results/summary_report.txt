@@ -2,7 +2,7 @@
       MMOTU XAI Pipeline - Summary Report
 ====================================================
 
-Date Generated: 2026-06-25 18:47:31
+Date Generated: 2026-07-08 16:02:50
 Run Name: exp_001
 Device: auto
 
@@ -50,11 +50,11 @@ mobilenet_v3_large:
   Bal Acc:    0.7240
 
 swin_t:
-  Best Epoch: 48
-  Top-1 Acc:  0.7787
-  Top-2 Acc:  0.8809
-  Macro F1:   0.7010
-  Bal Acc:    0.6976
+  Best Epoch: 39
+  Top-1 Acc:  0.7745
+  Top-2 Acc:  0.8894
+  Macro F1:   0.6888
+  Bal Acc:    0.6874
 
 --- 4. XAI Alignment Results (ExBale) ---
 Backbone: densenet121

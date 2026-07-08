@@ -1,0 +1,12 @@
+Comparison,Statistic,p-value,Significant (Bonferroni)
+Omnibus (Friedman),12.361904761904043,0.014853490912136556,
+densenet121 vs resnet50,18958.0,0.0618380951014479,No
+densenet121 vs efficientnet_b3,20203.0,0.31053783771183674,No
+densenet121 vs mobilenet_v3_large,19968.0,0.23992660861626258,No
+densenet121 vs swin_t,16272.0,0.00020847366137772955,Yes
+resnet50 vs efficientnet_b3,20755.0,0.5249481133149703,No
+resnet50 vs mobilenet_v3_large,20469.0,0.40553896575956827,No
+resnet50 vs swin_t,18397.0,0.02432345642820242,No
+efficientnet_b3 vs mobilenet_v3_large,21487.0,0.8934012901846188,No
+efficientnet_b3 vs swin_t,16219.0,0.00018050269532158641,Yes
+mobilenet_v3_large vs swin_t,16244.0,0.0001932254687060304,Yes

@@ -5,5 +5,5 @@
     "best_val_top2_acc": 0.8808510899543762,
     "best_val_balanced_acc": 0.7240031793603223,
     "run_name": "exp_001_mobilenet_v3_large",
-    "timestamp": "2026-06-10 16:30:47"
+    "timestamp": "2026-07-08 00:14:02"
 }
