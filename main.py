@@ -632,22 +632,31 @@ def main():
 
 
     # ── Stage 4.5: Uncertainty Quantification and Conformal Risk Control ──
-    if run_stage(4) and trained_models:
-        logger.info("=" * 60)
-        logger.info("Stage 4.5: Uncertainty Quantification and Conformal Risk Control")
-        
-        # We import it here so it doesn't clutter the top of your file
-        from uncertainty.run_uncertainty_pipeline import run_uncertainty_pipeline
+    if run_stage(4):
+        if not trained_models:
+            for model_name in config.training.models_to_train:
+                ckpt_path = Path(config.output.checkpoints_dir) / f"{config.experiment.run_name}_{model_name}_best.pt"
+                if ckpt_path.exists():
+                    trained_models[model_name] = str(ckpt_path)
+                else:
+                    logger.warning(f"Uncertainty stage checkpoint not found for {model_name}: {ckpt_path}")
 
-        uncertainty_df = run_uncertainty_pipeline(
-            trained_models=trained_models,
-            config=config,
-            device=device,
-            alpha=getattr(config.uncertainty, 'alpha', 0.10),
-            alpha_sweep=getattr(config.uncertainty, 'alpha_sweep', None),
-            logger=logger
-        )
-        logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")  
+        if trained_models:
+            logger.info("=" * 60)
+            logger.info("Stage 4.5: Uncertainty Quantification and Conformal Risk Control")
+            
+            # We import it here so it doesn't clutter the top of your file
+            from uncertainty.run_uncertainty_pipeline import run_uncertainty_pipeline
+
+            uncertainty_df = run_uncertainty_pipeline(
+                trained_models=trained_models,
+                config=config,
+                device=device,
+                alpha=getattr(config.uncertainty, 'alpha', 0.10),
+                alpha_sweep=getattr(config.uncertainty, 'alpha_sweep', None),
+                logger=logger
+            )
+            logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")  
     
     
     # ── Stage 5: Visualizations ──
