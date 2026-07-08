@@ -126,11 +126,20 @@ def run_uncertainty_pipeline(
             n_bins=config.uncertainty.ece_n_bins
         )
 
-        uncertainty_scores_softmax = -np.log(test_calibrated_probs.max(axis=1))
+        uncertainty_scores_softmax = -np.log(np.clip(test_calibrated_probs.max(axis=1), 1e-12, 1.0))
         rc_curve_softmax = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_softmax)
 
         # 8. MC Dropout (AURC comparison)
         mc_estimator = MCDropoutEstimator(model, device, n_samples=config.uncertainty.mc_dropout_samples)
+        n_active_dropout_layers = sum(
+            1 for module in mc_estimator.model.modules()
+            if isinstance(module, torch.nn.Dropout) and module.training
+        )
+        if n_active_dropout_layers == 0:
+            raise RuntimeError(
+                f"[{model_name}] MC-Dropout found no active nn.Dropout layers after enable_mc_dropout(); "
+                "epistemic estimate would be deterministic and invalid."
+            )
 
         all_mc_entropy = []
         for images, _, _ in test_loader:
