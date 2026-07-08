@@ -122,8 +122,6 @@ def save_qualitative_comparison_figure(rows: List[Dict], save_path: str):
     """Save a two-row qualitative comparison figure with Original, Mask, and four explanation maps."""
     method_order = ["gradcam", "scorecam", "eigencam", "saliency"]
     column_titles = ["Original Image", "Seg. Mask", "Grad CAM", "Score CAM", "Eigen CAM", "Saliency"]
-    title_fontsize = 20
-    row_label_fontsize = 20
 
     fig, axes = plt.subplots(nrows=len(rows), ncols=6, figsize=(18, 6.5), constrained_layout=True)
     if len(rows) == 1:
@@ -139,7 +137,7 @@ def save_qualitative_comparison_figure(rows: List[Dict], save_path: str):
         row_label = row.get("row_label", "")
 
         for col_idx, title in enumerate(column_titles):
-            axes[row_idx, col_idx].set_title(title, fontsize=title_fontsize, pad=6)
+            axes[row_idx, col_idx].set_title(title, fontsize=10, pad=6)
             axes[row_idx, col_idx].axis('off')
 
         axes[row_idx, 0].imshow(image)
@@ -151,7 +149,7 @@ def save_qualitative_comparison_figure(rows: List[Dict], save_path: str):
             axes[row_idx, offset].imshow(overlay)
 
         axes[row_idx, 0].text(-0.18, 0.5, row_label, transform=axes[row_idx, 0].transAxes,
-                              rotation=90, va='center', ha='center', fontsize=row_label_fontsize, fontweight='bold')
+                              rotation=90, va='center', ha='center', fontsize=10, fontweight='bold')
 
     Path(save_path).parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight')

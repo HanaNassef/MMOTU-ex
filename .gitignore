@@ -29,7 +29,8 @@ wheels/
 *.egg
 
 # ML
-
+*.pt
+*.pth
 *.ckpt
 *.h5
 
