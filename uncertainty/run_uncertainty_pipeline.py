@@ -7,6 +7,8 @@ from pathlib import Path
 
 # Import your existing data loader function
 from data.dataset import get_dataloaders
+from models.factory import get_model
+from utils.checkpoint import load_checkpoint
 
 from .calibration import TemperatureScaler, expected_calibration_error
 from .conformal import MondrianAPSConformalPredictor, evaluate_conformal_sets
@@ -33,6 +35,19 @@ def _get_logits_and_labels(model, dataloader, device):
             all_labels.append(labels.cpu().numpy()) 
     return np.vstack(all_logits), np.concatenate(all_labels)
 
+
+def _resolve_model_name(model_key: str) -> str:
+    if "_fold" in model_key:
+        return model_key.split("_fold")[0]
+    return model_key
+
+
+def _load_model_from_checkpoint(model_key: str, checkpoint_path: str, config, device: torch.device):
+    model_name = _resolve_model_name(model_key)
+    model, _ = get_model(model_name, num_classes=config.training.num_classes, dropout=config.training.dropout)
+    load_checkpoint(checkpoint_path, model)
+    return model.to(device).eval()
+
 def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.device, alpha: float | None = None, logger=None):
     
     # 1. Initialize Data Loaders 
@@ -54,7 +69,9 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
     results_dir.mkdir(parents=True, exist_ok=True)
     alpha = float(alpha if alpha is not None else getattr(config.uncertainty, "alpha", 0.10))
     
-    for model_name, model in trained_models.items():
+    for model_name, checkpoint_path in trained_models.items():
+        model = _load_model_from_checkpoint(model_name, checkpoint_path, config, device)
+
         # 2. Run forward pass on Val split
         val_logits, val_labels = _get_logits_and_labels(model, val_loader, device)
         
