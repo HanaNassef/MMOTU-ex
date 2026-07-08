@@ -7083,3 +7083,84 @@
 2026-07-08 16:02:50 - exp_001 - INFO - ============================================================
 2026-07-08 16:02:50 - exp_001 - INFO - Stage 6: Summary Report
 2026-07-08 16:02:50 - exp_001 - INFO - === Pipeline complete ===
+2026-07-08 16:20:57 - exp_001 - INFO - ============================================================
+2026-07-08 16:20:57 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-07-08 16:20:57 - exp_001 - INFO - ============================================================
+2026-07-08 16:20:57 - exp_001 - INFO - Stage 3.5: Ensemble Evaluation
+2026-07-08 16:21:27 - exp_001 - INFO - Ensemble Test Top-1: 0.7857
+2026-07-08 16:21:27 - exp_001 - INFO - Ensemble Test Macro F1: 0.7436
+2026-07-08 16:21:28 - exp_001 - INFO - ============================================================
+2026-07-08 16:21:28 - exp_001 - INFO - Stage 4: Evaluation
+2026-07-08 16:21:28 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_densenet121_swa.pt
+2026-07-08 16:21:41 - exp_001 - INFO - TTA densenet121: Top1=0.7245 F1=0.6695
+2026-07-08 16:21:41 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_resnet50_swa.pt
+2026-07-08 16:21:56 - exp_001 - INFO - TTA resnet50: Top1=0.7449 F1=0.6789
+2026-07-08 16:21:56 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_efficientnet_b3_swa.pt
+2026-07-08 16:22:09 - exp_001 - INFO - TTA efficientnet_b3: Top1=0.7007 F1=0.6418
+2026-07-08 16:22:09 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_mobilenet_v3_large_swa.pt
+2026-07-08 16:22:18 - exp_001 - INFO - TTA mobilenet_v3_large: Top1=0.7245 F1=0.6615
+2026-07-08 16:22:18 - exp_001 - INFO - TTA loading: results/checkpoints/exp_001_swin_t_swa.pt
+2026-07-08 16:22:34 - exp_001 - INFO - TTA swin_t: Top1=0.7653 F1=0.7140
+2026-07-08 16:22:34 - exp_001 - INFO - === Evaluating densenet121 ===
+2026-07-08 16:22:34 - exp_001 - INFO - Optimal thresholds: SC<0.1, CC<0.5
+2026-07-08 16:22:34 - exp_001 - INFO - ExBale ROC-AUC: 0.5421
+2026-07-08 16:22:34 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for densenet121...
+2026-07-08 16:22:34 - exp_001 - INFO - === Evaluating resnet50 ===
+2026-07-08 16:22:34 - exp_001 - INFO - Optimal thresholds: SC<0.3, CC<0.3
+2026-07-08 16:22:34 - exp_001 - INFO - ExBale ROC-AUC: 0.5077
+2026-07-08 16:22:34 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for resnet50...
+2026-07-08 16:22:34 - exp_001 - INFO - === Evaluating efficientnet_b3 ===
+2026-07-08 16:22:34 - exp_001 - INFO - Optimal thresholds: SC<0.3, CC<0.3
+2026-07-08 16:22:34 - exp_001 - INFO - ExBale ROC-AUC: 0.5537
+2026-07-08 16:22:34 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for efficientnet_b3...
+2026-07-08 16:22:34 - exp_001 - INFO - === Evaluating mobilenet_v3_large ===
+2026-07-08 16:22:34 - exp_001 - INFO - Optimal thresholds: SC<0.1, CC<0.4
+2026-07-08 16:22:34 - exp_001 - INFO - ExBale ROC-AUC: 0.5703
+2026-07-08 16:22:34 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for mobilenet_v3_large...
+2026-07-08 16:22:34 - exp_001 - INFO - === Evaluating swin_t ===
+2026-07-08 16:22:34 - exp_001 - INFO - Optimal thresholds: SC<0.2, CC<0.6
+2026-07-08 16:22:34 - exp_001 - INFO - ExBale ROC-AUC: 0.5285
+2026-07-08 16:22:34 - exp_001 - INFO - Running correct vs incorrect ExBale analysis for swin_t...
+2026-07-08 16:22:34 - exp_001 - INFO - Statistical Tests computed for DenseNet121.
+2026-07-08 16:22:35 - exp_001 - INFO - ============================================================
+2026-07-08 16:22:35 - exp_001 - INFO - Stage 4.5: Uncertainty Quantification and Conformal Risk Control
+2026-07-08 16:22:41 - exp_001 - WARNING - [uncertainty] densenet121: fitted temperature=0.632
+2026-07-08 16:23:16 - exp_001 - WARNING - [uncertainty] resnet50: fitted temperature=0.595
+2026-07-08 16:23:47 - exp_001 - WARNING - [uncertainty] efficientnet_b3: fitted temperature=0.729
+2026-07-08 16:24:15 - exp_001 - WARNING - [uncertainty] mobilenet_v3_large: fitted temperature=0.638
+2026-07-08 16:24:31 - exp_001 - WARNING - [uncertainty] swin_t: fitted temperature=0.724
+2026-07-08 16:25:10 - exp_001 - INFO - Uncertainty summary:
+              Backbone  Alpha  Temperature   ECE_Pre  ECE_Post  Marginal_Coverage  Avg_Set_Size  Singleton_Rate  AURC_Softmax  AURC_MC_Dropout
+0          densenet121   0.05     0.631862  0.185474  0.065216           0.976190      5.833333        0.023810      0.135924         0.137038
+1          densenet121   0.10     0.631862  0.185474  0.065216           0.955782      5.156463        0.040816      0.135924         0.137038
+2          densenet121   0.20     0.631862  0.185474  0.065216           0.925170      4.170068        0.102041      0.135924         0.137038
+3             resnet50   0.05     0.595057  0.191230  0.078680           0.982993      6.003401        0.027211      0.125078         0.136538
+4             resnet50   0.10     0.595057  0.191230  0.078680           0.952381      4.938776        0.044218      0.125078         0.136538
+5             resnet50   0.20     0.595057  0.191230  0.078680           0.925170      3.860544        0.166667      0.125078         0.136538
+6      efficientnet_b3   0.05     0.728801  0.112385  0.050052           0.979592      6.258503        0.023810      0.137658         0.147995
+7      efficientnet_b3   0.10     0.728801  0.112385  0.050052           0.948980      4.925170        0.051020      0.137658         0.147995
+8      efficientnet_b3   0.20     0.728801  0.112385  0.050052           0.921769      3.931973        0.108844      0.137658         0.147995
+9   mobilenet_v3_large   0.05     0.637623  0.181671  0.087029           0.982993      6.340136        0.023810      0.159655         0.170111
+10  mobilenet_v3_large   0.10     0.637623  0.181671  0.087029           0.938776      5.034014        0.057823      0.159655         0.170111
+11  mobilenet_v3_large   0.20     0.637623  0.181671  0.087029           0.928571      4.146259        0.115646      0.159655         0.170111
+12              swin_t   0.05     0.723743  0.134688  0.046379           0.996599      6.292517        0.020408      0.115781         0.119603
+13              swin_t   0.10     0.723743  0.134688  0.046379           0.952381      4.598639        0.071429      0.115781         0.119603
+14              swin_t   0.20     0.723743  0.134688  0.046379           0.935374      3.506803        0.210884      0.115781         0.119603
+2026-07-08 16:25:10 - exp_001 - INFO - === Pipeline complete ===
+2026-07-08 16:25:20 - exp_001 - INFO - ============================================================
+2026-07-08 16:25:20 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-07-08 16:25:20 - exp_001 - INFO - ============================================================
+2026-07-08 16:25:20 - exp_001 - INFO - Stage 5: Visualization
+2026-07-08 16:25:51 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison1_densenet121.pdf
+2026-07-08 16:26:07 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison2_resnet50.pdf
+2026-07-08 16:26:18 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison3_efficientnet_b3.pdf
+2026-07-08 16:26:22 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison4_mobilenet_v3_large.pdf
+2026-07-08 16:26:33 - exp_001 - INFO - Saved primary qualitative comparison figure to results/figures/qualitative_comparison.pdf
+2026-07-08 16:26:34 - exp_001 - INFO - Saved qualitative comparison figure to results/figures/qualitative_comparisons/qualitative_comparison5_swin_t.pdf
+2026-07-08 16:26:34 - exp_001 - INFO - Saved qualitative figure manifest to results/figures/qualitative_comparisons/qualitative_comparison_manifest.json
+2026-07-08 16:26:34 - exp_001 - INFO - === Pipeline complete ===
+2026-07-08 16:26:43 - exp_001 - INFO - ============================================================
+2026-07-08 16:26:43 - exp_001 - INFO - Run: exp_001 | Device: cuda | Debug: False
+2026-07-08 16:26:43 - exp_001 - INFO - ============================================================
+2026-07-08 16:26:43 - exp_001 - INFO - Stage 6: Summary Report
+2026-07-08 16:26:43 - exp_001 - INFO - === Pipeline complete ===
