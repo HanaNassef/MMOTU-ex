@@ -86,12 +86,12 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
                 print(message)
         
         # 4. Apply Scaler to Val Data
-        val_calibrated_logits = scaler(torch.tensor(val_logits).to(device)).cpu().numpy()
+        val_calibrated_logits = scaler(torch.tensor(val_logits).to(device)).detach().cpu().numpy()
         val_calibrated_probs = F.softmax(torch.tensor(val_calibrated_logits), dim=1).numpy()
         
         # 5. Run test split + Calibrate
         test_logits, test_labels = _get_logits_and_labels(model, test_loader, device)
-        test_calibrated_logits = scaler(torch.tensor(test_logits).to(device)).cpu().numpy()
+        test_calibrated_logits = scaler(torch.tensor(test_logits).to(device)).detach().cpu().numpy()
         test_calibrated_probs = F.softmax(torch.tensor(test_calibrated_logits), dim=1).numpy()
         test_raw_probs = F.softmax(torch.tensor(test_logits), dim=1).numpy()
         
