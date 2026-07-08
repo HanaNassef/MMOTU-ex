@@ -644,6 +644,7 @@ def main():
             config=config,
             device=device,
             alpha=getattr(config.uncertainty, 'alpha', 0.10),
+            alpha_sweep=getattr(config.uncertainty, 'alpha_sweep', None),
             logger=logger
         )
         logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")  

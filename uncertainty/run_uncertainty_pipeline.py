@@ -48,13 +48,19 @@ def _load_model_from_checkpoint(model_key: str, checkpoint_path: str, config, de
     load_checkpoint(checkpoint_path, model)
     return model.to(device).eval()
 
-def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.device, alpha: float | None = None, logger=None):
+def run_uncertainty_pipeline(
+    trained_models: dict,
+    config: dict,
+    device: torch.device,
+    alpha: float | None = None,
+    alpha_sweep=None,
+    logger=None,
+):
     
     # 1. Initialize Data Loaders 
     splits_path = getattr(config.data, "splits_path", None) or getattr(config.data, "splits_csv")
     _, val_loader, test_loader = get_dataloaders(splits_path, config)
 
-    summary_data = []
     risk_contributions_by_model = {}
     
 
@@ -67,7 +73,19 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
     figures_dir.mkdir(parents=True, exist_ok=True)
     results_dir = Path(config.output.results_dir)
     results_dir.mkdir(parents=True, exist_ok=True)
-    alpha = float(alpha if alpha is not None else getattr(config.uncertainty, "alpha", 0.10))
+    default_alpha = float(alpha if alpha is not None else getattr(config.uncertainty, "alpha", 0.10))
+    if alpha_sweep is None:
+        alpha_values = [default_alpha]
+    elif isinstance(alpha_sweep, (int, float)):
+        alpha_values = [float(alpha_sweep)]
+    else:
+        alpha_values = [float(value) for value in alpha_sweep]
+        if not alpha_values:
+            alpha_values = [default_alpha]
+        if default_alpha not in alpha_values:
+            alpha_values = [default_alpha] + alpha_values
+
+    plot_alpha = default_alpha if default_alpha in alpha_values else alpha_values[0]
     
     for model_name, checkpoint_path in trained_models.items():
         model = _load_model_from_checkpoint(model_name, checkpoint_path, config, device)
@@ -108,12 +126,6 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
             n_bins=config.uncertainty.ece_n_bins
         )
 
-        predictor = MondrianAPSConformalPredictor(alpha=alpha, min_calibration_per_class=config.uncertainty.min_calibration_per_class)
-        predictor.calibrate(val_calibrated_probs, val_labels)
-
-        pred_sets = predictor.predict_sets(test_calibrated_probs)
-        conformal_eval = evaluate_conformal_sets(pred_sets, test_labels, num_classes=config.training.num_classes)
-
         uncertainty_scores_softmax = -np.log(test_calibrated_probs.max(axis=1))
         rc_curve_softmax = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_softmax)
 
@@ -128,32 +140,50 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
         uncertainty_scores_mc = np.concatenate(all_mc_entropy)
         rc_curve_mc = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_mc)
 
-        summary_rows.append({
-            "Backbone": model_name,
-            "Alpha": alpha,
-            "Temperature": fitted_temperature,
-            "ECE_Pre": ece_pre,
-            "ECE_Post": ece_post,
-            "Marginal_Coverage": conformal_eval["marginal_coverage"],
-            "Avg_Set_Size": conformal_eval["avg_set_size"],
-            "Singleton_Rate": conformal_eval["singleton_rate"],
-            "AURC_Softmax": rc_curve_softmax["aurc"],
-            "AURC_MC_Dropout": rc_curve_mc["aurc"],
-        })
+        conformal_eval_for_plot = None
+        pred_sets_for_plot = None
+
+        for alpha_value in alpha_values:
+            predictor = MondrianAPSConformalPredictor(
+                alpha=alpha_value,
+                min_calibration_per_class=config.uncertainty.min_calibration_per_class,
+            )
+            predictor.calibrate(val_calibrated_probs, val_labels)
+
+            pred_sets = predictor.predict_sets(test_calibrated_probs)
+            conformal_eval = evaluate_conformal_sets(pred_sets, test_labels, num_classes=config.training.num_classes)
+
+            if alpha_value == plot_alpha:
+                conformal_eval_for_plot = conformal_eval
+                pred_sets_for_plot = pred_sets
+
+            summary_rows.append({
+                "Backbone": model_name,
+                "Alpha": alpha_value,
+                "Temperature": fitted_temperature,
+                "ECE_Pre": ece_pre,
+                "ECE_Post": ece_post,
+                "Marginal_Coverage": conformal_eval["marginal_coverage"],
+                "Avg_Set_Size": conformal_eval["avg_set_size"],
+                "Singleton_Rate": conformal_eval["singleton_rate"],
+                "AURC_Softmax": rc_curve_softmax["aurc"],
+                "AURC_MC_Dropout": rc_curve_mc["aurc"],
+            })
 
         with open(results_dir / f"{model_name}_riskcoverage.json", "w") as f:
             json.dump(rc_curve_softmax, f)
 
         rc_curves_by_backbone[model_name] = rc_curve_softmax
-        conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval["per_class_coverage"]}
-        pred_sets_by_backbone[model_name] = pred_sets
+        if conformal_eval_for_plot is not None and pred_sets_for_plot is not None:
+            conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval_for_plot["per_class_coverage"]}
+            pred_sets_by_backbone[model_name] = pred_sets_for_plot
         
         # Store for stats (using the calibrated probabilities)
         risk_contributions_by_model[model_name] = compute_per_image_risk_contributions(test_calibrated_probs, test_labels)
             
     # Draw the three big comparison charts using the boxes
     plot_risk_coverage_curves(rc_curves_by_backbone, str(figures_dir / "all_risk_coverage.png"))
-    plot_coverage_per_class(conformal_eval_by_backbone, str(figures_dir / "all_class_coverage.png"), alpha=0.10)
+    plot_coverage_per_class(conformal_eval_by_backbone, str(figures_dir / "all_class_coverage.png"), alpha=plot_alpha)
     plot_set_size_distribution(pred_sets_by_backbone, str(figures_dir / "all_set_sizes.png"))
 
     # 9. Write DataFrames
