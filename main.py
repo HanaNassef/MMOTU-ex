@@ -642,7 +642,9 @@ def main():
         uncertainty_df = run_uncertainty_pipeline(
             trained_models=trained_models,
             config=config,
-            device=device
+            device=device,
+            alpha=getattr(config.uncertainty, 'alpha', 0.10),
+            logger=logger
         )
         logger.info(f"Uncertainty summary:\n{uncertainty_df.to_string()}")  
     

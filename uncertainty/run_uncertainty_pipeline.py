@@ -33,10 +33,11 @@ def _get_logits_and_labels(model, dataloader, device):
             all_labels.append(labels.cpu().numpy()) 
     return np.vstack(all_logits), np.concatenate(all_labels)
 
-def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.device):
+def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.device, alpha: float | None = None, logger=None):
     
     # 1. Initialize Data Loaders 
-    _, val_loader, test_loader = get_dataloaders(config.data.splits_path, config)
+    splits_path = getattr(config.data, "splits_path", None) or getattr(config.data, "splits_csv")
+    _, val_loader, test_loader = get_dataloaders(splits_path, config)
 
     summary_data = []
     risk_contributions_by_model = {}
@@ -45,9 +46,13 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
     rc_curves_by_backbone = {}
     conformal_eval_by_backbone = {}
     pred_sets_by_backbone = {}
+    summary_rows = []
     
     figures_dir = Path(config.output.figures_dir)
     figures_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = Path(config.output.results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    alpha = float(alpha if alpha is not None else getattr(config.uncertainty, "alpha", 0.10))
     
     for model_name, model in trained_models.items():
         # 2. Run forward pass on Val split
@@ -55,7 +60,13 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
         
         # 3. Fit Temperature Scaler
         scaler = TemperatureScaler().to(device)
-        scaler.fit(torch.tensor(val_logits).to(device), torch.tensor(val_labels).to(device))
+        fitted_temperature = scaler.fit(torch.tensor(val_logits).to(device), torch.tensor(val_labels).to(device))
+        if fitted_temperature <= 1.05 or fitted_temperature > 10:
+            message = f"[uncertainty] {model_name}: fitted temperature={fitted_temperature:.3f}"
+            if logger is not None:
+                logger.warning(message)
+            else:
+                print(message)
         
         # 4. Apply Scaler to Val Data
         val_calibrated_logits = scaler(torch.tensor(val_logits).to(device)).cpu().numpy()
@@ -80,53 +91,45 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
             n_bins=config.uncertainty.ece_n_bins
         )
 
-        # 7. Alpha Sweep (0.05, 0.10, 0.20)
-        for current_alpha in config.uncertainty.alpha_sweep:
-            
-            predictor = MondrianAPSConformalPredictor(alpha=current_alpha, min_calibration_per_class=config.uncertainty.min_calibration_per_class)
-            predictor.calibrate(val_calibrated_probs, val_labels)
-            
-            pred_sets = predictor.predict_sets(test_calibrated_probs)
-            conformal_eval = evaluate_conformal_sets(pred_sets, test_labels, num_classes=8) 
-            
-            uncertainty_scores_softmax = -np.log(test_calibrated_probs.max(axis=1))
-            rc_curve_softmax = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_softmax)
-            
-            # 8. MC Dropout (AURC comparison)
-            mc_estimator = MCDropoutEstimator(model, device, n_samples=config.uncertainty.mc_dropout_samples)
-            
-            # Run MC Dropout over the test loader
-            all_mc_entropy = []
-            for images, _, _ in test_loader:
-                mc_results = mc_estimator.predict(images)
-                all_mc_entropy.append(mc_results['predictive_entropy'])
-            
-            uncertainty_scores_mc = np.concatenate(all_mc_entropy)
-            rc_curve_mc = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_mc)
+        predictor = MondrianAPSConformalPredictor(alpha=alpha, min_calibration_per_class=config.uncertainty.min_calibration_per_class)
+        predictor.calibrate(val_calibrated_probs, val_labels)
 
-            # Log to summary
-            summary_data.append({
-                "Backbone": model_name,
-                "Alpha": current_alpha,
-                "Temperature": scaler.temperature.item(),
-                "ECE_Pre": ece_pre,
-                "ECE_Post": ece_post,
-                "Marginal_Coverage": conformal_eval["marginal_coverage"],
-                "Avg_Set_Size": conformal_eval["avg_set_size"],
-                "Singleton_Rate": conformal_eval["singleton_rate"],
-                "AURC_Softmax": rc_curve_softmax["aurc"],
-                "AURC_MC_Dropout": rc_curve_mc["aurc"]
-            })
-            
-            # Capture the data we need for the group charts (only keeping the main 0.10 alpha data)
-            if current_alpha == 0.10:
-                with open(f"results/{model_name}_riskcoverage.json", "w") as f:
-                    json.dump(rc_curve_softmax, f)
-                
-                # Save the numbers in our boxes
-                rc_curves_by_backbone[model_name] = rc_curve_softmax
-                conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval["per_class_coverage"]}
-                pred_sets_by_backbone[model_name] = pred_sets
+        pred_sets = predictor.predict_sets(test_calibrated_probs)
+        conformal_eval = evaluate_conformal_sets(pred_sets, test_labels, num_classes=config.training.num_classes)
+
+        uncertainty_scores_softmax = -np.log(test_calibrated_probs.max(axis=1))
+        rc_curve_softmax = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_softmax)
+
+        # 8. MC Dropout (AURC comparison)
+        mc_estimator = MCDropoutEstimator(model, device, n_samples=config.uncertainty.mc_dropout_samples)
+
+        all_mc_entropy = []
+        for images, _, _ in test_loader:
+            mc_results = mc_estimator.predict(images)
+            all_mc_entropy.append(mc_results["predictive_entropy"])
+
+        uncertainty_scores_mc = np.concatenate(all_mc_entropy)
+        rc_curve_mc = risk_coverage_curve(test_calibrated_probs, test_labels, uncertainty_scores_mc)
+
+        summary_rows.append({
+            "Backbone": model_name,
+            "Alpha": alpha,
+            "Temperature": fitted_temperature,
+            "ECE_Pre": ece_pre,
+            "ECE_Post": ece_post,
+            "Marginal_Coverage": conformal_eval["marginal_coverage"],
+            "Avg_Set_Size": conformal_eval["avg_set_size"],
+            "Singleton_Rate": conformal_eval["singleton_rate"],
+            "AURC_Softmax": rc_curve_softmax["aurc"],
+            "AURC_MC_Dropout": rc_curve_mc["aurc"],
+        })
+
+        with open(results_dir / f"{model_name}_riskcoverage.json", "w") as f:
+            json.dump(rc_curve_softmax, f)
+
+        rc_curves_by_backbone[model_name] = rc_curve_softmax
+        conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval["per_class_coverage"]}
+        pred_sets_by_backbone[model_name] = pred_sets
         
         # Store for stats (using the calibrated probabilities)
         risk_contributions_by_model[model_name] = compute_per_image_risk_contributions(test_calibrated_probs, test_labels)
@@ -137,10 +140,10 @@ def run_uncertainty_pipeline(trained_models: dict, config: dict, device: torch.d
     plot_set_size_distribution(pred_sets_by_backbone, str(figures_dir / "all_set_sizes.png"))
 
     # 9. Write DataFrames
-    summary_df = pd.DataFrame(summary_data)
-    summary_df.to_csv("results/uncertainty_conformal_summary.csv", index=False)
+    summary_df = pd.DataFrame(summary_rows)
+    summary_df.to_csv(results_dir / "uncertainty_conformal_summary.csv", index=False)
     
     stats_df = run_repeated_measures_tests(risk_contributions_by_model)
-    stats_df.to_csv("results/backbone_uncertainty_friedman.csv", index=False)
+    stats_df.to_csv(results_dir / "backbone_uncertainty_friedman.csv", index=False)
     
     return summary_df

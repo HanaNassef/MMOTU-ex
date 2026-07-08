@@ -75,10 +75,18 @@ def plot_coverage_per_class(conformal_eval_by_backbone: dict, save_path: str, al
 
 def plot_set_size_distribution(pred_sets_by_backbone: dict, save_path: str):
     plt.figure(figsize=(10, 6))
-    for model_name, pred_sets in pred_sets_by_backbone.items():
+    max_set_size = 0
+    for pred_sets in pred_sets_by_backbone.values():
+        if pred_sets:
+            max_set_size = max(max_set_size, max(len(s) for s in pred_sets))
+
+    bins = np.arange(0.5, max_set_size + 1.5, 1.0)
+    colors = [BLUE_DARK, BLUE_MEDIUM, "#ffa600", "#7a5195", "#ef5675"]
+
+    for (model_name, pred_sets), color in zip(pred_sets_by_backbone.items(), colors):
         set_sizes = [len(s) for s in pred_sets]
-        sns.kdeplot(set_sizes, label=model_name, bw_adjust=1.5)
-        
+        sns.histplot(set_sizes, bins=bins, stat="density", element="step", fill=False, label=model_name, color=color)
+
     plt.xlabel('Prediction Set Size')
     plt.ylabel('Density')
     plt.title('Distribution of Conformal Set Sizes')
