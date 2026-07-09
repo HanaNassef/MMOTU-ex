@@ -61,6 +61,15 @@ def run_uncertainty_pipeline(
     splits_path = getattr(config.data, "splits_path", None) or getattr(config.data, "splits_csv")
     _, val_loader, test_loader = get_dataloaders(splits_path, config)
 
+    # Resolve test image paths for conformal export (done once before per-backbone loop)
+    if hasattr(test_loader.dataset, "df"):
+        dataset_test_paths = test_loader.dataset.df["image_path"].tolist()
+    else:
+        raise RuntimeError(
+            "Cannot resolve test image paths for conformal set export; "
+            "test_loader.dataset must expose a .df with an image_path column."
+        )
+
     risk_contributions_by_model = {}
     
 
@@ -186,6 +195,26 @@ def run_uncertainty_pipeline(
         if conformal_eval_for_plot is not None and pred_sets_for_plot is not None:
             conformal_eval_by_backbone[model_name] = {"per_class_coverage": conformal_eval_for_plot["per_class_coverage"]}
             pred_sets_by_backbone[model_name] = pred_sets_for_plot
+
+            # -- additive export for qualitative test case inspection --
+            from .conformal_export import (
+                export_conformal_sets,
+                select_qualitative_test_cases,
+            )
+
+            sets_df = export_conformal_sets(
+                model_name=model_name,
+                image_paths=dataset_test_paths,
+                true_labels=test_labels,
+                test_calibrated_probs=test_calibrated_probs,
+                pred_sets=pred_sets_for_plot,
+                output_dir=config.output.results_dir,
+            )
+            qualitative_df = select_qualitative_test_cases(sets_df)
+            qualitative_df.to_csv(
+                results_dir / f"{model_name}_conformal_test_cases.csv",
+                index=False,
+            )
         
         # Store for stats (using the calibrated probabilities)
         risk_contributions_by_model[model_name] = compute_per_image_risk_contributions(test_calibrated_probs, test_labels)
